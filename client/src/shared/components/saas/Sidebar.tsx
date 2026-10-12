@@ -1,4 +1,4 @@
-import { useState, type FC } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   User,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../../services/auth/useAuth';
 
@@ -27,116 +28,115 @@ const navItems: NavItem[] = [
 
 export interface SidebarProps {
   className?: string;
+  isMobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-export const Sidebar: FC<SidebarProps> = ({ className = '' }) => {
+export const Sidebar: FC<SidebarProps> = ({
+  className = '',
+  isMobileOpen = false,
+  onMobileClose,
+}) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
 
+  // Close on Escape key when mobile drawer is open
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMobileOpen && onMobileClose) {
+        onMobileClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMobileOpen, onMobileClose]);
+
   const handleSignOut = async () => {
+    if (onMobileClose) onMobileClose();
     await signOut();
     navigate('/');
   };
 
-  return (
-    <aside
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={`h-screen sticky top-0 flex flex-col justify-between bg-white border-r border-neutral-200 z-40 select-none transition-all duration-300 ease-in-out ${isHovered ? 'w-64 shadow-xl' : 'w-18'
-        } ${className}`}
-      aria-label="Sidebar Navigation"
-    >
-      {/* Top: Brand Header */}
-      <div>
-        <div className="h-16 flex items-center px-4 border-b border-neutral-100 overflow-hidden">
-          <div className="flex items-center gap-3 min-w-max">
-            {/* Minimalist Logo Mark */}
-            <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold text-lg tracking-tight shrink-0 shadow-sm">
-              F
-            </div>
+  /**
+   * Reusable content block for both desktop and mobile drawer
+   */
+  const renderNavBody = (isExpanded: boolean, onNavClick?: () => void) => (
+    <>
+      {/* Navigation Links */}
+      <nav className="p-2.5 space-y-1.5 mt-2 flex-1" aria-label="Main SaaS Menu">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
 
-            {/* Brand Name - visible only when hovered/expanded */}
-            <div
-              className={`transition-all duration-200 overflow-hidden ${isHovered ? 'opacity-100 w-auto translate-x-0' : 'opacity-0 w-0 -translate-x-2'
-                }`}
-            >
-              <h1 className="text-base font-bold tracking-tight text-black whitespace-nowrap leading-none">
-                FinArt
-              </h1>
-              <span className="text-[11px] font-medium text-neutral-400 whitespace-nowrap">
-                Personal Finance
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Links */}
-        <nav className="p-2.5 space-y-1.5 mt-2" aria-label="Main SaaS Menu">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={`group flex items-center h-11 px-3 rounded-xl text-sm font-medium transition-all duration-150 ${isActive
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              onClick={() => onNavClick?.()}
+              className={`group flex items-center h-11 px-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+                isActive
                   ? 'bg-black text-white shadow-sm'
                   : 'text-neutral-600 hover:text-black hover:bg-neutral-100'
+              }`}
+              title={!isExpanded ? item.name : undefined}
+            >
+              {/* Icon - Always visible */}
+              <div className="w-5 flex items-center justify-center shrink-0">
+                <Icon
+                  className={`w-5 h-5 transition-colors ${
+                    isActive ? 'text-white' : 'text-neutral-500 group-hover:text-black'
                   }`}
-                title={!isHovered ? item.name : undefined}
-              >
-                {/* Icon - Always visible */}
-                <div className="w-5 flex items-center justify-center shrink-0">
-                  <Icon
-                    className={`w-5 h-5 transition-colors ${isActive ? 'text-white' : 'text-neutral-500 group-hover:text-black'
-                      }`}
-                  />
-                </div>
+                />
+              </div>
 
-                {/* Name - Visible only when hovered/expanded */}
-                <span
-                  className={`ml-3.5 whitespace-nowrap overflow-hidden transition-all duration-200 ${isHovered
+              {/* Name - Visible only when expanded / mobile */}
+              <span
+                className={`ml-3.5 whitespace-nowrap overflow-hidden transition-all duration-200 ${
+                  isExpanded
                     ? 'opacity-100 max-w-[160px] translate-x-0'
                     : 'opacity-0 max-w-0 -translate-x-2'
-                    }`}
-                >
-                  {item.name}
-                </span>
-              </NavLink>
-            );
-          })}
-        </nav>
-      </div>
+                }`}
+              >
+                {item.name}
+              </span>
+            </NavLink>
+          );
+        })}
+      </nav>
 
       {/* Bottom: User Profile & Sign Out */}
       <div className="p-2.5 border-t border-neutral-100 overflow-hidden">
         {/* User Card */}
         <div
-          className={`flex items-center h-11 px-3 rounded-xl mb-1 transition-all ${isHovered ? 'bg-neutral-50' : ''
-            }`}
+          className={`flex items-center h-12 px-2.5 rounded-xl mb-1 transition-all ${
+            isExpanded ? 'bg-neutral-50' : ''
+          }`}
         >
-          <div className="w-5 flex items-center justify-center shrink-0">
-            {user?.avatarUrl ? (
+          <div className="w-8 h-8 shrink-0 flex items-center justify-center">
+            {user?.avatarUrl && !imageError ? (
               <img
                 src={user.avatarUrl}
                 alt={user.name || 'User'}
+                referrerPolicy="no-referrer"
+                onError={() => setImageError(true)}
                 className="w-8 h-8 rounded-full object-cover shrink-0"
               />
             ) : (
               <div className="w-8 h-8 rounded-full bg-neutral-200 text-black flex items-center justify-center font-semibold text-xs shrink-0">
-                <User className="w-4 h-4 text-neutral-700" />
+                {user?.name ? user.name.charAt(0).toUpperCase() : <User className="w-4 h-4 text-neutral-700" />}
               </div>
             )}
           </div>
 
           <div
-            className={`ml-3.5 overflow-hidden transition-all duration-200 ${isHovered
-              ? 'opacity-100 max-w-[160px] translate-x-0'
-              : 'opacity-0 max-w-0 -translate-x-2'
-              }`}
+            className={`ml-3 overflow-hidden transition-all duration-200 ${
+              isExpanded
+                ? 'opacity-100 max-w-[160px] translate-x-0'
+                : 'opacity-0 max-w-0 -translate-x-2'
+            }`}
           >
             <p className="text-xs font-semibold text-black truncate leading-tight">
               {user?.name || 'My Account'}
@@ -152,23 +152,113 @@ export const Sidebar: FC<SidebarProps> = ({ className = '' }) => {
           type="button"
           onClick={handleSignOut}
           className="group w-full flex items-center h-11 px-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-150 cursor-pointer"
-          title={!isHovered ? 'Sign Out' : undefined}
+          title={!isExpanded ? 'Sign Out' : undefined}
         >
           <div className="w-5 flex items-center justify-center shrink-0">
             <LogOut className="w-5 h-5 text-red-500 group-hover:text-red-700 transition-colors" />
           </div>
 
           <span
-            className={`ml-3.5 whitespace-nowrap overflow-hidden transition-all duration-200 ${isHovered
-              ? 'opacity-100 max-w-[160px] translate-x-0'
-              : 'opacity-0 max-w-0 -translate-x-2'
-              }`}
+            className={`ml-3.5 whitespace-nowrap overflow-hidden transition-all duration-200 ${
+              isExpanded
+                ? 'opacity-100 max-w-[160px] translate-x-0'
+                : 'opacity-0 max-w-0 -translate-x-2'
+            }`}
           >
             Sign Out
           </span>
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* ========================================================
+          1. DESKTOP SIDEBAR (hidden on mobile, visible md and up)
+         ======================================================== */}
+      <aside
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`hidden md:flex h-screen sticky top-0 flex-col justify-between bg-white border-r border-neutral-200 z-40 select-none transition-all duration-300 ease-in-out ${
+          isHovered ? 'w-64 shadow-xl' : 'w-18'
+        } ${className}`}
+        aria-label="Desktop Sidebar Navigation"
+      >
+        {/* Brand Header */}
+        <div className="h-16 flex items-center px-4 border-b border-neutral-100 overflow-hidden shrink-0">
+          <div className="flex items-center gap-3 min-w-max">
+            <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold text-lg tracking-tight shrink-0 shadow-sm">
+              F
+            </div>
+
+            <div
+              className={`transition-all duration-200 overflow-hidden ${
+                isHovered ? 'opacity-100 w-auto translate-x-0' : 'opacity-0 w-0 -translate-x-2'
+              }`}
+            >
+              <h1 className="text-base font-bold tracking-tight text-black whitespace-nowrap leading-none">
+                FinArt
+              </h1>
+              <span className="text-[11px] font-medium text-neutral-400 whitespace-nowrap">
+                Personal Finance
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {renderNavBody(isHovered)}
+      </aside>
+
+      {/* ========================================================
+          2. MOBILE DRAWER OVERLAY & SIDEBAR (only on mobile screen)
+         ======================================================== */}
+      {/* Backdrop */}
+      {isMobileOpen && (
+        <div
+          onClick={onMobileClose}
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 md:hidden transition-opacity"
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Drawer */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-white flex flex-col justify-between border-r border-neutral-200 shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
+        }`}
+        aria-label="Mobile Sidebar Navigation"
+        aria-hidden={!isMobileOpen}
+      >
+        {/* Mobile Header with brand + close X button */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-neutral-100 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold text-lg tracking-tight shrink-0 shadow-sm">
+              F
+            </div>
+            <div>
+              <h1 className="text-base font-bold tracking-tight text-black leading-none">
+                FinArt
+              </h1>
+              <span className="text-[11px] font-medium text-neutral-400">
+                Personal Finance
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="p-2 rounded-xl text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer"
+            aria-label="Close sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {renderNavBody(true, onMobileClose)}
+      </aside>
+    </>
   );
 };
 

@@ -217,6 +217,7 @@ const Navbar: FC<NavbarProps> = ({
                     <img
                       src={currentUser.avatarUrl}
                       alt={currentUser.name || 'User'}
+                      referrerPolicy="no-referrer"
                       className="w-8 h-8 rounded-full object-cover"
                     />
                   ) : (
@@ -351,9 +352,18 @@ const Navbar: FC<NavbarProps> = ({
               /* Logged In View with Profile and Sign Out */
               <div className="space-y-2.5">
                 <div className="flex items-center gap-3 p-2.5 rounded-xl bg-neutral-50 border border-neutral-100">
-                  <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-black">
-                    <User className="w-4 h-4" />
-                  </div>
+                  {currentUser?.avatarUrl ? (
+                    <img
+                      src={currentUser.avatarUrl}
+                      alt={currentUser.name || 'User'}
+                      referrerPolicy="no-referrer"
+                      className="w-9 h-9 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-black">
+                      <User className="w-4 h-4" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-black truncate">
                       {currentUser?.name || 'FinArt User'}
