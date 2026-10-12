@@ -1,9 +1,12 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import WebLayout from "../layouts/WebLayout";
 import LandingPage from "../../pages/web/LandingPage";
 import PricingPage from "../../pages/web/PricingPage";
 import ContactPage from "../../pages/web/Contactpage";
 import NotFoundPage from "../../pages/NotFoundPage";
+import SignInPage from "../../pages/auth/SignInPage";
+import AuthCallbackPage from "../../pages/auth/AuthCallbackPage";
+import DashboardPage from "../../pages/DashboardPage";
 
 export const router = createBrowserRouter([
     // Web Layout (Navbar and Footer always present, inside content changes dynamically)
@@ -30,8 +33,23 @@ export const router = createBrowserRouter([
         ]
     },
 
-    // login
+    // Auth Routes
     {
-        path: "/auth"
+        path: "/signin",
+        element: <SignInPage />
+    },
+    {
+        path: "/auth",
+        element: <Navigate to="/signin" replace />
+    },
+    {
+        path: "/auth/callback",
+        element: <AuthCallbackPage />
+    },
+
+    // Dashboard
+    {
+        path: "/dashboard",
+        element: <DashboardPage />
     }
-]);
+]);

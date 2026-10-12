@@ -122,8 +122,8 @@ const Navbar: FC<NavbarProps> = ({
     setIsMobileMenuOpen(false);
     if (onSignIn) {
       onSignIn();
-    } else if (controlledIsLoggedIn === undefined) {
-      setInternalLoggedIn(true);
+    } else {
+      navigate('/signin');
     }
   };
 
@@ -248,7 +248,10 @@ const Navbar: FC<NavbarProps> = ({
                     <div className="py-1">
                       <button
                         type="button"
-                        onClick={() => setIsProfileDropdownOpen(false)}
+                        onClick={() => {
+                          setIsProfileDropdownOpen(false);
+                          navigate('/dashboard');
+                        }}
                         className="w-full flex items-center px-4 py-2 text-sm text-neutral-700 hover:text-black hover:bg-neutral-50 transition-colors cursor-pointer text-left"
                       >
                         <LayoutDashboard className="w-4 h-4 mr-2.5 text-neutral-500" />
@@ -366,7 +369,10 @@ const Navbar: FC<NavbarProps> = ({
                     variant="secondary"
                     size="sm"
                     fullWidth
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      navigate('/dashboard');
+                    }}
                   >
                     Dashboard
                   </CustomBtn>
