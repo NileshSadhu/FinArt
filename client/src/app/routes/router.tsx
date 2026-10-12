@@ -7,6 +7,8 @@ import NotFoundPage from "../../pages/NotFoundPage";
 import SignInPage from "../../pages/auth/SignInPage";
 import AuthCallbackPage from "../../pages/auth/AuthCallbackPage";
 import DashboardPage from "../../pages/DashboardPage";
+import FinArtLayout from "../layouts/FinArtLayout";
+import { PublicOnlyRoute, ProtectedRoute } from "./routeGuards";
 
 export const router = createBrowserRouter([
     // Web Layout (Navbar and Footer always present, inside content changes dynamically)
@@ -15,7 +17,11 @@ export const router = createBrowserRouter([
         children: [
             {
                 path: "/",
-                element: <LandingPage />
+                element: (
+                    <PublicOnlyRoute>
+                        <LandingPage />
+                    </PublicOnlyRoute>
+                )
             },
             {
                 path: "/pricing",
@@ -36,7 +42,11 @@ export const router = createBrowserRouter([
     // Auth Routes
     {
         path: "/signin",
-        element: <SignInPage />
+        element: (
+            <PublicOnlyRoute>
+                <SignInPage />
+            </PublicOnlyRoute>
+        )
     },
     {
         path: "/auth",
@@ -47,9 +57,18 @@ export const router = createBrowserRouter([
         element: <AuthCallbackPage />
     },
 
-    // Dashboard
+    // SaaS App (Sidebar on left, page on right)
     {
-        path: "/dashboard",
-        element: <DashboardPage />
+        element: <FinArtLayout />,
+        children: [
+            {
+                path: "/dashboard",
+                element: (
+                    <ProtectedRoute>
+                        <DashboardPage />
+                    </ProtectedRoute>
+                )
+            }
+        ]
     }
 ]);

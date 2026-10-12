@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type FC } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Menu, X, User, ChevronDown, LayoutDashboard, Settings, LogOut } from 'lucide-react';
 import CustomBtn from '../CustomBtn';
+import { useAuth } from '../../services/auth/useAuth';
 
 export interface NavbarUser {
   name?: string;
@@ -29,16 +30,14 @@ const Navbar: FC<NavbarProps> = ({
   className = '',
 }) => {
   const navigate = useNavigate();
+  const { user: authUser, isLoggedIn: authIsLoggedIn, signOut: authSignOut } = useAuth();
 
-  // Supports both controlled mode via props or internal state for immediate testing
-  const [internalLoggedIn, setInternalLoggedIn] = useState<boolean>(false);
-  const isLoggedIn = controlledIsLoggedIn !== undefined ? controlledIsLoggedIn : internalLoggedIn;
-
-  const defaultUser: NavbarUser = {
-    name: 'Alex Morgan',
-    email: 'alex@finart.app',
-  };
-  const currentUser = controlledUser !== undefined ? controlledUser : (isLoggedIn ? defaultUser : null);
+  const isLoggedIn = controlledIsLoggedIn !== undefined ? controlledIsLoggedIn : authIsLoggedIn;
+  const currentUser: NavbarUser | null = controlledUser !== undefined
+    ? controlledUser
+    : (authUser
+      ? { name: authUser.name ?? undefined, email: authUser.email, avatarUrl: authUser.avatarUrl ?? undefined }
+      : null);
 
   // Mobile menu state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -127,13 +126,14 @@ const Navbar: FC<NavbarProps> = ({
     }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     setIsMobileMenuOpen(false);
     setIsProfileDropdownOpen(false);
     if (onSignOut) {
       onSignOut();
-    } else if (controlledIsLoggedIn === undefined) {
-      setInternalLoggedIn(false);
+    } else {
+      await authSignOut();
+      navigate('/');
     }
   };
 
