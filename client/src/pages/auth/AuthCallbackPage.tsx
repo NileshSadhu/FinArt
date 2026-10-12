@@ -1,19 +1,23 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const AuthCallbackPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const hasHandled = useRef(false);
 
   useEffect(() => {
+    if (hasHandled.current) return;
+    hasHandled.current = true;
+
     const status = searchParams.get('status');
 
     if (status === 'success') {
-      toast.success('Signed in successfully');
+      toast.success('Signed in successfully', { id: 'auth-callback' });
       navigate('/dashboard', { replace: true });
     } else {
-      toast.error('Authentication failed. Please try again.');
+      toast.error('Authentication failed. Please try again.', { id: 'auth-callback' });
       navigate('/signin', { replace: true });
     }
   }, [searchParams, navigate]);
