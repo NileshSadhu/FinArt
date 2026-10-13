@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Menu, X, User, ChevronDown, LayoutDashboard, Settings, LogOut } from 'lucide-react';
 import CustomBtn from '../CustomBtn';
 import { useAuth } from '../../services/auth/useAuth';
+import { Modal } from '../Modal';
 
 export interface NavbarUser {
   name?: string;
@@ -44,6 +45,8 @@ const Navbar: FC<NavbarProps> = ({
 
   // Profile dropdown state
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Scroll state to enhance blur when content passes behind
   const [isScrolled, setIsScrolled] = useState(false);
@@ -127,13 +130,19 @@ const Navbar: FC<NavbarProps> = ({
   };
 
   const handleSignOut = async () => {
-    setIsMobileMenuOpen(false);
-    setIsProfileDropdownOpen(false);
-    if (onSignOut) {
-      onSignOut();
-    } else {
-      await authSignOut();
-      navigate('/');
+    setIsLoggingOut(true);
+    try {
+      setIsMobileMenuOpen(false);
+      setIsProfileDropdownOpen(false);
+      if (onSignOut) {
+        onSignOut();
+      } else {
+        await authSignOut();
+        setIsLogoutModalOpen(false);
+        navigate('/');
+      }
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -272,7 +281,10 @@ const Navbar: FC<NavbarProps> = ({
                     <div className="pt-1 border-t border-neutral-100">
                       <button
                         type="button"
-                        onClick={handleSignOut}
+                        onClick={() => {
+                          setIsProfileDropdownOpen(false);
+                          setIsLogoutModalOpen(true);
+                        }}
                         className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer text-left"
                       >
                         <LogOut className="w-4 h-4 mr-2.5 text-red-600" />
@@ -390,7 +402,10 @@ const Navbar: FC<NavbarProps> = ({
                     variant="outline"
                     size="sm"
                     fullWidth
-                    onClick={handleSignOut}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setIsLogoutModalOpen(true);
+                    }}
                     className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 hover:text-red-700"
                   >
                     Sign Out
@@ -401,6 +416,18 @@ const Navbar: FC<NavbarProps> = ({
           </div>
         </div>
       )}
+      {/* Logout Confirmation Modal */}
+      <Modal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleSignOut}
+        isLoading={isLoggingOut}
+        type="danger"
+        title="Are you sure you want to log out?"
+        message="You will be safely signed out of your FinArt account and returned to the main page."
+        confirmText="Log Out"
+        cancelText="Stay logged in"
+      />
     </div>
   );
 };

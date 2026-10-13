@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../../services/auth/useAuth';
+import { Modal } from '../Modal';
 
 export interface NavItem {
   name: string;
@@ -39,6 +40,8 @@ export const Sidebar: FC<SidebarProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
@@ -55,9 +58,15 @@ export const Sidebar: FC<SidebarProps> = ({
   }, [isMobileOpen, onMobileClose]);
 
   const handleSignOut = async () => {
-    if (onMobileClose) onMobileClose();
-    await signOut();
-    navigate('/');
+    setIsLoggingOut(true);
+    try {
+      if (onMobileClose) onMobileClose();
+      await signOut();
+      setIsLogoutModalOpen(false);
+      navigate('/');
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   /**
@@ -150,7 +159,7 @@ export const Sidebar: FC<SidebarProps> = ({
         {/* Sign Out Button */}
         <button
           type="button"
-          onClick={handleSignOut}
+          onClick={() => setIsLogoutModalOpen(true)}
           className="group w-full flex items-center h-11 px-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-150 cursor-pointer"
           title={!isExpanded ? 'Sign Out' : undefined}
         >
@@ -258,6 +267,19 @@ export const Sidebar: FC<SidebarProps> = ({
 
         {renderNavBody(true, onMobileClose)}
       </aside>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleSignOut}
+        isLoading={isLoggingOut}
+        type="danger"
+        title="Are you sure you want to log out?"
+        message="You will be safely signed out of your FinArt workspace and returned to the main page."
+        confirmText="Log Out"
+        cancelText="Stay logged in"
+      />
     </>
   );
 };
