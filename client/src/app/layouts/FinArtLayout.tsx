@@ -1,7 +1,8 @@
 import { useState, type FC, type ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Menu, User } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import Sidebar from '../../shared/components/saas/Sidebar';
+import UserAvatar from '../../shared/components/UserAvatar';
 import { useAuth } from '../../shared/services/auth/useAuth';
 
 export interface FinArtLayoutProps {
@@ -40,18 +41,7 @@ export const FinArtLayout: FC<FinArtLayoutProps> = ({ children }) => {
 
         {/* Right side mobile profile indicator */}
         <div className="flex items-center">
-          {user?.avatarUrl ? (
-            <img
-              src={user.avatarUrl}
-              alt={user.name || 'User'}
-              referrerPolicy="no-referrer"
-              className="w-8 h-8 rounded-full object-cover border border-neutral-200"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-black font-semibold text-xs">
-              {user?.name ? user.name.charAt(0).toUpperCase() : <User className="w-4 h-4 text-neutral-600" />}
-            </div>
-          )}
+          <UserAvatar avatarUrl={user?.avatarUrl} name={user?.name} size="md" />
         </div>
       </header>
 

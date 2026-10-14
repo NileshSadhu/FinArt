@@ -18,30 +18,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    let isMounted = true;
-
-    authService
-      .getMe()
-      .then((currentUser) => {
-        if (isMounted) setUser(currentUser);
-      })
-      .catch(() => {
-        if (isMounted) setUser(null);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
+    checkAuth();
   }, []);
 
   const signOut = async () => {
     try {
       await authService.signOut();
-    } catch {
-      // ignore
     } finally {
       setUser(null);
     }

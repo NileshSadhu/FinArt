@@ -1,156 +1,75 @@
 import { useState, useEffect, useRef, type FC } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Menu, X, User, ChevronDown, LayoutDashboard, Settings, LogOut } from 'lucide-react';
+import { Menu, X, ChevronDown, LayoutDashboard, Settings, LogOut } from 'lucide-react';
 import CustomBtn from '../CustomBtn';
 import { useAuth } from '../../services/auth/useAuth';
 import { Modal } from '../Modal';
+import UserAvatar from '../UserAvatar';
 
-export interface NavbarUser {
-  name?: string;
-  email?: string;
-  avatarUrl?: string;
-}
+const navLinks = [
+  { name: 'Pricing', path: '/pricing' },
+  { name: 'Contact', path: '/contact' },
+];
 
 export interface NavbarProps {
-  isLoggedIn?: boolean;
-  user?: NavbarUser | null;
-  onSignIn?: () => void;
-  onSignOut?: () => void;
-  onPricingClick?: () => void;
-  onContactClick?: () => void;
   className?: string;
 }
 
-const Navbar: FC<NavbarProps> = ({
-  isLoggedIn: controlledIsLoggedIn,
-  user: controlledUser,
-  onSignIn,
-  onSignOut,
-  onPricingClick,
-  onContactClick,
-  className = '',
-}) => {
+export const Navbar: FC<NavbarProps> = ({ className = '' }) => {
   const navigate = useNavigate();
-  const { user: authUser, isLoggedIn: authIsLoggedIn, signOut: authSignOut } = useAuth();
+  const { user, isLoggedIn, signOut } = useAuth();
 
-  const isLoggedIn = controlledIsLoggedIn !== undefined ? controlledIsLoggedIn : authIsLoggedIn;
-  const currentUser: NavbarUser | null = controlledUser !== undefined
-    ? controlledUser
-    : (authUser
-      ? { name: authUser.name ?? undefined, email: authUser.email, avatarUrl: authUser.avatarUrl ?? undefined }
-      : null);
-
-  // Mobile menu state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  // Profile dropdown state
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  // Scroll state to enhance blur when content passes behind
   const [isScrolled, setIsScrolled] = useState(false);
 
   const profileDropdownRef = useRef<HTMLDivElement>(null);
-  const navContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 15);
-    };
-
+    const handleScroll = () => setIsScrolled(window.scrollY > 15);
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close profile dropdown on outside click
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        profileDropdownRef.current &&
-        !profileDropdownRef.current.contains(event.target as Node)
-      ) {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target as Node)) {
         setIsProfileDropdownOpen(false);
       }
     };
-
-    if (isProfileDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isProfileDropdownOpen]);
-
-  // Close on Escape key
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
         setIsMobileMenuOpen(false);
         setIsProfileDropdownOpen(false);
       }
     };
 
+    document.addEventListener('mousedown', handleClickOutside);
     window.addEventListener('keydown', handleKeyDown);
     return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
-
-  // Actions that automatically close mobile menu on click
-  const handlePricing = () => {
-    setIsMobileMenuOpen(false);
-    if (onPricingClick) {
-      onPricingClick();
-    } else {
-      navigate('/pricing');
-    }
-  };
-
-  const handleContact = () => {
-    setIsMobileMenuOpen(false);
-    if (onContactClick) {
-      onContactClick();
-    } else {
-      navigate('/contact');
-    }
-  };
-
-  const handleSignIn = () => {
-    setIsMobileMenuOpen(false);
-    if (onSignIn) {
-      onSignIn();
-    } else {
-      navigate('/signin');
-    }
-  };
 
   const handleSignOut = async () => {
     setIsLoggingOut(true);
     try {
       setIsMobileMenuOpen(false);
       setIsProfileDropdownOpen(false);
-      if (onSignOut) {
-        onSignOut();
-      } else {
-        await authSignOut();
-        setIsLogoutModalOpen(false);
-        navigate('/');
-      }
+      await signOut();
+      setIsLogoutModalOpen(false);
+      navigate('/');
     } finally {
       setIsLoggingOut(false);
     }
   };
 
   return (
-    <div
-      ref={navContainerRef}
-      className={`sticky top-4 z-50 w-full px-4 sm:px-6 flex flex-col items-center pointer-events-none ${className}`}
-    >
+    <div className={`sticky top-4 z-50 w-full px-4 sm:px-6 flex flex-col items-center pointer-events-none ${className}`}>
       {/* Centered Floating Island Navbar */}
       <header
         className={`pointer-events-auto w-full max-w-4xl rounded-full transition-all duration-300 border ${isScrolled
@@ -159,100 +78,65 @@ const Navbar: FC<NavbarProps> = ({
           }`}
       >
         <div className="px-5 sm:px-7 h-14 sm:h-16 flex items-center justify-between">
+          {/* Brand */}
+          <Link
+            to="/"
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setIsMobileMenuOpen(false);
+            }}
+            className="text-xl sm:text-2xl font-bold tracking-tight text-black select-none hover:opacity-85 transition-opacity"
+            aria-label="FinArt Home"
+          >
+            FinArt
+          </Link>
 
-          {/* ========================================================
-              LEFT: FinArt Brand (Clean Text, No Dollar Icon)
-             ======================================================== */}
-          <div className="flex items-center">
-            <Link
-              to="/"
-              onClick={() => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                setIsMobileMenuOpen(false);
-              }}
-              className="text-xl sm:text-2xl font-bold tracking-tight text-black select-none hover:opacity-85 transition-opacity"
-              aria-label="FinArt Home"
-            >
-              FinArt
-            </Link>
-          </div>
-
-          {/* ========================================================
-              CENTER: Desktop Navigation (Pricing, Contact)
-             ======================================================== */}
+          {/* Desktop Nav Links */}
           <nav className="hidden md:flex items-center space-x-8" aria-label="Main Navigation">
-            <button
-              type="button"
-              onClick={handlePricing}
-              className="text-sm font-medium text-neutral-600 hover:text-black transition-colors cursor-pointer"
-            >
-              Pricing
-            </button>
-            <button
-              type="button"
-              onClick={handleContact}
-              className="text-sm font-medium text-neutral-600 hover:text-black transition-colors cursor-pointer"
-            >
-              Contact
-            </button>
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className="text-sm font-medium text-neutral-600 hover:text-black transition-colors"
+              >
+                {link.name}
+              </Link>
+            ))}
           </nav>
 
-          {/* ========================================================
-              RIGHT: Desktop Auth (SignIn Button OR Profile Icon)
-             ======================================================== */}
+          {/* Desktop Auth */}
           <div className="hidden md:flex items-center">
             {!isLoggedIn ? (
-              /* Not Logged In: Black button with white text */
               <CustomBtn
                 variant="primary"
                 size="sm"
-                onClick={handleSignIn}
+                onClick={() => navigate('/signin')}
                 className="font-medium px-4 py-1.5"
               >
                 Sign In
               </CustomBtn>
             ) : (
-              /* Already Logged In: Profile Icon with Dropdown */
               <div className="relative" ref={profileDropdownRef}>
                 <button
                   type="button"
                   onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
-                  className="flex items-center gap-1.5 p-1 rounded-full border border-neutral-200 hover:border-black bg-white transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                  className="flex items-center gap-1.5 p-1 rounded-full border border-neutral-200 hover:border-black bg-white transition-all duration-150 cursor-pointer focus:outline-none"
                   aria-expanded={isProfileDropdownOpen}
-                  aria-haspopup="true"
                   aria-label="User Profile"
                 >
-                  {currentUser?.avatarUrl ? (
-                    <img
-                      src={currentUser.avatarUrl}
-                      alt={currentUser.name || 'User'}
-                      referrerPolicy="no-referrer"
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-black">
-                      <User className="w-4 h-4" />
-                    </div>
-                  )}
+                  <UserAvatar avatarUrl={user?.avatarUrl} name={user?.name} size="sm" />
                   <ChevronDown
                     className={`w-3.5 h-3.5 text-neutral-500 transition-transform duration-200 mr-1 ${isProfileDropdownOpen ? 'rotate-180 text-black' : ''
                       }`}
                   />
                 </button>
 
-                {/* Profile Dropdown */}
                 {isProfileDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-white border border-neutral-200 shadow-xl py-2 z-50 text-black">
                     <div className="px-4 py-2.5 border-b border-neutral-100">
-                      <p className="text-xs text-neutral-400 font-medium uppercase tracking-wider">
-                        Signed in as
-                      </p>
-                      <p className="text-sm font-semibold truncate text-black mt-0.5">
-                        {currentUser?.name || 'FinArt User'}
-                      </p>
-                      <p className="text-xs text-neutral-500 truncate">
-                        {currentUser?.email || 'user@finart.app'}
-                      </p>
+                      <p className="text-xs text-neutral-400 font-medium uppercase tracking-wider">Signed in as</p>
+                      <p className="text-sm font-semibold truncate text-black mt-0.5">{user?.name || 'FinArt User'}</p>
+                      <p className="text-xs text-neutral-500 truncate">{user?.email || 'user@finart.app'}</p>
                     </div>
 
                     <div className="py-1">
@@ -297,92 +181,56 @@ const Navbar: FC<NavbarProps> = ({
             )}
           </div>
 
-          {/* ========================================================
-              MOBILE: Hamburger Icon (Smaller Screen)
-             ======================================================== */}
+          {/* Mobile Hamburger */}
           <div className="flex md:hidden items-center">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-              className="p-2 rounded-full text-black hover:bg-neutral-100 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-black"
-              aria-expanded={isMobileMenuOpen}
-              aria-controls="mobile-menu"
+              className="p-2 rounded-full text-black hover:bg-neutral-100 transition-colors cursor-pointer"
               aria-label={isMobileMenuOpen ? 'Close Menu' : 'Open Menu'}
             >
-              {isMobileMenuOpen ? (
-                <X className="w-5 h-5 text-black" />
-              ) : (
-                <Menu className="w-5 h-5 text-black" />
-              )}
+              {isMobileMenuOpen ? <X className="w-5 h-5 text-black" /> : <Menu className="w-5 h-5 text-black" />}
             </button>
           </div>
         </div>
       </header>
 
-      {/* ========================================================
-          MOBILE MENU: Centered Dropdown Card
-          (Opens on click, closes itself when any item is clicked)
-         ======================================================== */}
+      {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
-        <div
-          id="mobile-menu"
-          className="pointer-events-auto mt-2 w-full max-w-4xl rounded-2xl bg-white/95 backdrop-blur-xl border border-neutral-200 shadow-xl p-4 transition-all duration-200 text-black"
-        >
+        <div className="pointer-events-auto mt-2 w-full max-w-4xl rounded-2xl bg-white/95 backdrop-blur-xl border border-neutral-200 shadow-xl p-4 transition-all duration-200 text-black">
           <div className="space-y-1">
-            {/* Pricing Link */}
-            <button
-              type="button"
-              onClick={handlePricing}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-neutral-800 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer text-left"
-            >
-              <span>Pricing</span>
-            </button>
-
-            {/* Contact Link */}
-            <button
-              type="button"
-              onClick={handleContact}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-neutral-800 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer text-left"
-            >
-              <span>Contact</span>
-            </button>
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full flex items-center px-3.5 py-2.5 rounded-xl text-sm font-medium text-neutral-800 hover:text-black hover:bg-neutral-100 transition-colors"
+              >
+                {link.name}
+              </Link>
+            ))}
           </div>
 
-          {/* Mobile Auth Row */}
           <div className="pt-3 mt-2 border-t border-neutral-100">
             {!isLoggedIn ? (
-              /* Black button with white text (closes menu on click) */
               <CustomBtn
                 variant="primary"
                 fullWidth
                 size="md"
-                onClick={handleSignIn}
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  navigate('/signin');
+                }}
               >
                 Sign In
               </CustomBtn>
             ) : (
-              /* Logged In View with Profile and Sign Out */
               <div className="space-y-2.5">
                 <div className="flex items-center gap-3 p-2.5 rounded-xl bg-neutral-50 border border-neutral-100">
-                  {currentUser?.avatarUrl ? (
-                    <img
-                      src={currentUser.avatarUrl}
-                      alt={currentUser.name || 'User'}
-                      referrerPolicy="no-referrer"
-                      className="w-9 h-9 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-black">
-                      <User className="w-4 h-4" />
-                    </div>
-                  )}
+                  <UserAvatar avatarUrl={user?.avatarUrl} name={user?.name} size="md" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-black truncate">
-                      {currentUser?.name || 'FinArt User'}
-                    </p>
-                    <p className="text-xs text-neutral-500 truncate">
-                      {currentUser?.email || 'user@finart.app'}
-                    </p>
+                    <p className="text-sm font-semibold text-black truncate">{user?.name || 'FinArt User'}</p>
+                    <p className="text-xs text-neutral-500 truncate">{user?.email || 'user@finart.app'}</p>
                   </div>
                 </div>
 
@@ -416,6 +264,7 @@ const Navbar: FC<NavbarProps> = ({
           </div>
         </div>
       )}
+
       {/* Logout Confirmation Modal */}
       <Modal
         isOpen={isLogoutModalOpen}

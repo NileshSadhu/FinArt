@@ -7,11 +7,11 @@ import {
   TrendingUp,
   Settings,
   LogOut,
-  User,
   X,
 } from 'lucide-react';
 import { useAuth } from '../../services/auth/useAuth';
 import { Modal } from '../Modal';
+import UserAvatar from '../UserAvatar';
 
 export interface NavItem {
   name: string;
@@ -33,13 +33,32 @@ export interface SidebarProps {
   onMobileClose?: () => void;
 }
 
+const BrandHeader: FC<{ isExpanded?: boolean }> = ({ isExpanded = true }) => (
+  <div className="flex items-center gap-3 min-w-max">
+    <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold text-lg tracking-tight shrink-0 shadow-sm">
+      F
+    </div>
+    <div
+      className={`transition-all duration-200 overflow-hidden ${
+        isExpanded ? 'opacity-100 w-auto translate-x-0' : 'opacity-0 w-0 -translate-x-2'
+      }`}
+    >
+      <h1 className="text-base font-bold tracking-tight text-white whitespace-nowrap leading-none">
+        FinArt
+      </h1>
+      <span className="text-[11px] font-medium text-neutral-400 whitespace-nowrap">
+        Personal Finance
+      </span>
+    </div>
+  </div>
+);
+
 export const Sidebar: FC<SidebarProps> = ({
   className = '',
   isMobileOpen = false,
   onMobileClose,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [imageError, setImageError] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const location = useLocation();
@@ -124,21 +143,12 @@ export const Sidebar: FC<SidebarProps> = ({
             isExpanded ? 'bg-neutral-800/60' : ''
           }`}
         >
-          <div className="w-8 h-8 shrink-0 flex items-center justify-center">
-            {user?.avatarUrl && !imageError ? (
-              <img
-                src={user.avatarUrl}
-                alt={user.name || 'User'}
-                referrerPolicy="no-referrer"
-                onError={() => setImageError(true)}
-                className="w-8 h-8 rounded-full object-cover shrink-0"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 text-white flex items-center justify-center font-semibold text-xs shrink-0">
-                {user?.name ? user.name.charAt(0).toUpperCase() : <User className="w-4 h-4 text-neutral-400" />}
-              </div>
-            )}
-          </div>
+          <UserAvatar
+            avatarUrl={user?.avatarUrl}
+            name={user?.name}
+            size="md"
+            className="border border-neutral-700 bg-neutral-800 text-white"
+          />
 
           <div
             className={`ml-3 overflow-hidden transition-all duration-200 ${
@@ -194,26 +204,8 @@ export const Sidebar: FC<SidebarProps> = ({
         } ${className}`}
         aria-label="Desktop Sidebar Navigation"
       >
-        {/* Brand Header */}
         <div className="h-16 flex items-center px-4 border-b border-neutral-800 overflow-hidden shrink-0">
-          <div className="flex items-center gap-3 min-w-max">
-            <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold text-lg tracking-tight shrink-0 shadow-sm">
-              F
-            </div>
-
-            <div
-              className={`transition-all duration-200 overflow-hidden ${
-                isHovered ? 'opacity-100 w-auto translate-x-0' : 'opacity-0 w-0 -translate-x-2'
-              }`}
-            >
-              <h1 className="text-base font-bold tracking-tight text-white whitespace-nowrap leading-none">
-                FinArt
-              </h1>
-              <span className="text-[11px] font-medium text-neutral-400 whitespace-nowrap">
-                Personal Finance
-              </span>
-            </div>
-          </div>
+          <BrandHeader isExpanded={isHovered} />
         </div>
 
         {renderNavBody(isHovered)}
@@ -222,7 +214,6 @@ export const Sidebar: FC<SidebarProps> = ({
       {/* ========================================================
           2. MOBILE DRAWER OVERLAY & SIDEBAR (only on mobile screen)
          ======================================================== */}
-      {/* Backdrop */}
       {isMobileOpen && (
         <div
           onClick={onMobileClose}
@@ -231,7 +222,6 @@ export const Sidebar: FC<SidebarProps> = ({
         />
       )}
 
-      {/* Drawer */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-neutral-900 flex flex-col justify-between border-r border-neutral-800 shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
@@ -239,21 +229,8 @@ export const Sidebar: FC<SidebarProps> = ({
         aria-label="Mobile Sidebar Navigation"
         aria-hidden={!isMobileOpen}
       >
-        {/* Mobile Header with brand + close X button */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-neutral-800 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold text-lg tracking-tight shrink-0 shadow-sm">
-              F
-            </div>
-            <div>
-              <h1 className="text-base font-bold tracking-tight text-white leading-none">
-                FinArt
-              </h1>
-              <span className="text-[11px] font-medium text-neutral-400">
-                Personal Finance
-              </span>
-            </div>
-          </div>
+          <BrandHeader isExpanded={true} />
 
           <button
             type="button"
