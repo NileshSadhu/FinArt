@@ -7,6 +7,7 @@ import NotFoundPage from "../../pages/NotFoundPage";
 import SignInPage from "../../pages/auth/SignInPage";
 import AuthCallbackPage from "../../pages/auth/AuthCallbackPage";
 import DashboardPage from "../../pages/DashboardPage";
+import Account from "../../pages/saas/Account";
 import FinArtLayout from "../layouts/FinArtLayout";
 import { PublicOnlyRoute, ProtectedRoute } from "./routeGuards";
 
@@ -66,6 +67,14 @@ export const router = createBrowserRouter([
                 element: (
                     <ProtectedRoute>
                         <DashboardPage />
+                    </ProtectedRoute>
+                )
+            },
+            {
+                path: "/accounts",
+                element: (
+                    <ProtectedRoute>
+                        <Account />
                     </ProtectedRoute>
                 )
             }
