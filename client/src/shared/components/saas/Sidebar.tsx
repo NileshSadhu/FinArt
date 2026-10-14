@@ -87,8 +87,8 @@ export const Sidebar: FC<SidebarProps> = ({
               onClick={() => onNavClick?.()}
               className={`group flex items-center h-11 px-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                 isActive
-                  ? 'bg-black text-white shadow-sm'
-                  : 'text-neutral-600 hover:text-black hover:bg-neutral-100'
+                  ? 'bg-white text-black font-semibold shadow-sm'
+                  : 'text-neutral-400 hover:text-black hover:bg-white'
               }`}
               title={!isExpanded ? item.name : undefined}
             >
@@ -96,7 +96,7 @@ export const Sidebar: FC<SidebarProps> = ({
               <div className="w-5 flex items-center justify-center shrink-0">
                 <Icon
                   className={`w-5 h-5 transition-colors ${
-                    isActive ? 'text-white' : 'text-neutral-500 group-hover:text-black'
+                    isActive ? 'text-black' : 'text-neutral-400 group-hover:text-black'
                   }`}
                 />
               </div>
@@ -117,11 +117,11 @@ export const Sidebar: FC<SidebarProps> = ({
       </nav>
 
       {/* Bottom: User Profile & Sign Out */}
-      <div className="p-2.5 border-t border-neutral-100 overflow-hidden">
+      <div className="p-2.5 border-t border-neutral-800 overflow-hidden">
         {/* User Card */}
         <div
           className={`flex items-center h-12 px-2.5 rounded-xl mb-1 transition-all ${
-            isExpanded ? 'bg-neutral-50' : ''
+            isExpanded ? 'bg-neutral-800/60' : ''
           }`}
         >
           <div className="w-8 h-8 shrink-0 flex items-center justify-center">
@@ -134,8 +134,8 @@ export const Sidebar: FC<SidebarProps> = ({
                 className="w-8 h-8 rounded-full object-cover shrink-0"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-neutral-200 text-black flex items-center justify-center font-semibold text-xs shrink-0">
-                {user?.name ? user.name.charAt(0).toUpperCase() : <User className="w-4 h-4 text-neutral-700" />}
+              <div className="w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 text-white flex items-center justify-center font-semibold text-xs shrink-0">
+                {user?.name ? user.name.charAt(0).toUpperCase() : <User className="w-4 h-4 text-neutral-400" />}
               </div>
             )}
           </div>
@@ -147,7 +147,7 @@ export const Sidebar: FC<SidebarProps> = ({
                 : 'opacity-0 max-w-0 -translate-x-2'
             }`}
           >
-            <p className="text-xs font-semibold text-black truncate leading-tight">
+            <p className="text-xs font-semibold text-white truncate leading-tight">
               {user?.name || 'My Account'}
             </p>
             <p className="text-[10px] text-neutral-400 truncate">
@@ -160,11 +160,11 @@ export const Sidebar: FC<SidebarProps> = ({
         <button
           type="button"
           onClick={() => setIsLogoutModalOpen(true)}
-          className="group w-full flex items-center h-11 px-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-150 cursor-pointer"
+          className="group w-full flex items-center h-11 px-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/15 hover:text-red-300 transition-all duration-150 cursor-pointer"
           title={!isExpanded ? 'Sign Out' : undefined}
         >
           <div className="w-5 flex items-center justify-center shrink-0">
-            <LogOut className="w-5 h-5 text-red-500 group-hover:text-red-700 transition-colors" />
+            <LogOut className="w-5 h-5 text-red-400 group-hover:text-red-300 transition-colors" />
           </div>
 
           <span
@@ -189,15 +189,15 @@ export const Sidebar: FC<SidebarProps> = ({
       <aside
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`hidden md:flex h-screen sticky top-0 flex-col justify-between bg-white border-r border-neutral-200 z-40 select-none transition-all duration-300 ease-in-out ${
+        className={`hidden md:flex h-screen sticky top-0 flex-col justify-between bg-neutral-900 border-r border-neutral-800 z-40 select-none transition-all duration-300 ease-in-out ${
           isHovered ? 'w-64 shadow-xl' : 'w-18'
         } ${className}`}
         aria-label="Desktop Sidebar Navigation"
       >
         {/* Brand Header */}
-        <div className="h-16 flex items-center px-4 border-b border-neutral-100 overflow-hidden shrink-0">
+        <div className="h-16 flex items-center px-4 border-b border-neutral-800 overflow-hidden shrink-0">
           <div className="flex items-center gap-3 min-w-max">
-            <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold text-lg tracking-tight shrink-0 shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold text-lg tracking-tight shrink-0 shadow-sm">
               F
             </div>
 
@@ -206,7 +206,7 @@ export const Sidebar: FC<SidebarProps> = ({
                 isHovered ? 'opacity-100 w-auto translate-x-0' : 'opacity-0 w-0 -translate-x-2'
               }`}
             >
-              <h1 className="text-base font-bold tracking-tight text-black whitespace-nowrap leading-none">
+              <h1 className="text-base font-bold tracking-tight text-white whitespace-nowrap leading-none">
                 FinArt
               </h1>
               <span className="text-[11px] font-medium text-neutral-400 whitespace-nowrap">
@@ -233,20 +233,20 @@ export const Sidebar: FC<SidebarProps> = ({
 
       {/* Drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-white flex flex-col justify-between border-r border-neutral-200 shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-neutral-900 flex flex-col justify-between border-r border-neutral-800 shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         }`}
         aria-label="Mobile Sidebar Navigation"
         aria-hidden={!isMobileOpen}
       >
         {/* Mobile Header with brand + close X button */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-neutral-100 shrink-0">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-neutral-800 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold text-lg tracking-tight shrink-0 shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold text-lg tracking-tight shrink-0 shadow-sm">
               F
             </div>
             <div>
-              <h1 className="text-base font-bold tracking-tight text-black leading-none">
+              <h1 className="text-base font-bold tracking-tight text-white leading-none">
                 FinArt
               </h1>
               <span className="text-[11px] font-medium text-neutral-400">
@@ -258,7 +258,7 @@ export const Sidebar: FC<SidebarProps> = ({
           <button
             type="button"
             onClick={onMobileClose}
-            className="p-2 rounded-xl text-neutral-500 hover:text-black hover:bg-neutral-100 transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
             aria-label="Close sidebar"
           >
             <X className="w-5 h-5" />
