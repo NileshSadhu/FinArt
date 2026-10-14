@@ -62,18 +62,34 @@ export const createAccount = asyncHandler(
 export const getAccounts = asyncHandler(async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
   const includeInactive = req.query.includeInactive === "true";
+  const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10) || 10));
 
-  const accounts = await accountRepository.findAllByUser(
+  const [accounts, total] = await accountRepository.findPaginatedByUser({
     userId,
     includeInactive,
-  );
+    page,
+    limit,
+  });
   const sums = await accountRepository.getEntrySums(accounts.map((a) => a.id));
 
   const data = accounts.map((a) =>
     toResponse(a, a.openingBalance.toNumber() + (sums.get(a.id) ?? 0)),
   );
 
-  return res.status(200).json(new ApiResponse(200, data, "Accounts fetched"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        accounts: data,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      "Accounts fetched",
+    ),
+  );
 });
 
 export const getAccount = asyncHandler(async (req: Request, res: Response) => {

@@ -25,6 +25,28 @@ export const accountRepository = {
     });
   },
 
+  findPaginatedByUser(options: {
+    userId: string;
+    includeInactive?: boolean;
+    page: number;
+    limit: number;
+  }): Promise<[Account[], number]> {
+    const { userId, includeInactive = false, page, limit } = options;
+    const where = { userId, ...(includeInactive ? {} : { isActive: true }) };
+    const skip = (page - 1) * limit;
+
+    return Promise.all([
+      prisma.account.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.account.count({ where }),
+    ]);
+  },
+
+
   findByIdAndUser(id: string, userId: string): Promise<Account | null> {
     return prisma.account.findFirst({ where: { id, userId } });
   },
