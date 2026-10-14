@@ -1,4 +1,4 @@
-import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes, type SelectHTMLAttributes, type ReactNode } from 'react';
 
 export interface CustomInputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: ReactNode;
@@ -39,11 +39,13 @@ export const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
           id={inputId}
           placeholder={placeholder}
           disabled={disabled}
-          className={`w-full h-11 px-3.5 rounded-xl border bg-white text-sm text-neutral-900 placeholder:text-neutral-400 transition-all duration-150 focus:outline-none ${error
-            ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/10'
-            : 'border-neutral-200 hover:border-neutral-300 focus:border-black focus:ring-2 focus:ring-black/5'
-            } ${disabled ? 'bg-neutral-50 text-neutral-400 cursor-not-allowed border-neutral-200' : ''
-            } ${className}`}
+          className={`w-full h-11 px-3.5 rounded-xl border bg-white text-sm text-neutral-900 placeholder:text-neutral-400 transition-all duration-150 focus:outline-none ${
+            error
+              ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/10'
+              : 'border-neutral-200 hover:border-neutral-300 focus:border-black focus:ring-2 focus:ring-black/5'
+          } ${
+            disabled ? 'bg-neutral-50 text-neutral-400 cursor-not-allowed border-neutral-200' : ''
+          } ${className}`}
           {...rest}
         />
 
@@ -58,5 +60,83 @@ export const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
 );
 
 CustomInput.displayName = 'CustomInput';
+
+export interface SelectOption {
+  label: string | number;
+  value: string | number;
+}
+
+export interface CustomSelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  label?: ReactNode;
+  options?: readonly (string | SelectOption)[];
+  error?: string;
+  helperText?: string;
+  containerClassName?: string;
+}
+
+export const CustomSelect = forwardRef<HTMLSelectElement, CustomSelectProps>(
+  (
+    {
+      label,
+      options,
+      children,
+      error,
+      helperText,
+      id,
+      disabled,
+      className = '',
+      containerClassName = '',
+      ...rest
+    },
+    ref
+  ) => {
+    const generatedId = useId();
+    const selectId = id || generatedId;
+
+    return (
+      <div className={`w-full flex flex-col gap-1.5 ${containerClassName}`}>
+        {label && (
+          <label htmlFor={selectId} className="text-sm font-medium text-neutral-800 select-none">
+            {label}
+          </label>
+        )}
+
+        <select
+          ref={ref}
+          id={selectId}
+          disabled={disabled}
+          className={`w-full h-11 px-3.5 rounded-xl border bg-white text-sm text-neutral-900 transition-all duration-150 focus:outline-none cursor-pointer ${
+            error
+              ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/10'
+              : 'border-neutral-200 hover:border-neutral-300 focus:border-black focus:ring-2 focus:ring-black/5'
+          } ${
+            disabled ? 'bg-neutral-50 text-neutral-400 cursor-not-allowed border-neutral-200' : ''
+          } ${className}`}
+          {...rest}
+        >
+          {options
+            ? options.map((opt, idx) => {
+                const value = typeof opt === 'string' ? opt : opt.value;
+                const label = typeof opt === 'string' ? opt : opt.label;
+                return (
+                  <option key={`${value}-${idx}`} value={value}>
+                    {label}
+                  </option>
+                );
+              })
+            : children}
+        </select>
+
+        {error ? (
+          <p className="text-sm text-red-600 leading-tight">{error}</p>
+        ) : (
+          helperText && <p className="text-xs text-neutral-500 leading-tight">{helperText}</p>
+        )}
+      </div>
+    );
+  }
+);
+
+CustomSelect.displayName = 'CustomSelect';
 
 export default CustomInput;
