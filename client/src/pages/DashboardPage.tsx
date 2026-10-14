@@ -1,4 +1,4 @@
-import PageHeader from '../shared/components/PageHeader';
+import PageHeader from '../shared/components/saas/PageHeader';
 import { useAuth } from '../shared/services/auth/useAuth';
 
 export const DashboardPage = () => {

@@ -3,8 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Menu, X, ChevronDown, LayoutDashboard, Settings, LogOut } from 'lucide-react';
 import CustomBtn from '../CustomBtn';
 import { useAuth } from '../../services/auth/useAuth';
-import { Modal } from '../Modal';
-import UserAvatar from '../UserAvatar';
+import { Modal } from '../saas/Modal';
+import UserAvatar from '../saas/UserAvatar';
 
 const navLinks = [
   { name: 'Pricing', path: '/pricing' },

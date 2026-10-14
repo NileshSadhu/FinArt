@@ -2,7 +2,7 @@ import { useState, type FC, type ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Sidebar from '../../shared/components/saas/Sidebar';
-import UserAvatar from '../../shared/components/UserAvatar';
+import UserAvatar from '../../shared/components/saas/UserAvatar';
 import { useAuth } from '../../shared/services/auth/useAuth';
 
 export interface FinArtLayoutProps {

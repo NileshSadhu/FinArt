@@ -1,7 +1,7 @@
 import type { FC, ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../shared/services/auth/useAuth';
-import Skeleton from '../../shared/components/Skeleton';
+import Skeleton from '../../shared/components/saas/Skeleton';
 
 export interface RouteGuardProps {
   children: ReactNode;

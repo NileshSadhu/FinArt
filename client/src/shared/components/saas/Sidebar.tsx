@@ -10,8 +10,8 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../../services/auth/useAuth';
-import { Modal } from '../Modal';
-import UserAvatar from '../UserAvatar';
+import { Modal } from './Modal';
+import UserAvatar from './UserAvatar';
 
 export interface NavItem {
   name: string;
@@ -39,9 +39,8 @@ const BrandHeader: FC<{ isExpanded?: boolean }> = ({ isExpanded = true }) => (
       F
     </div>
     <div
-      className={`transition-all duration-200 overflow-hidden ${
-        isExpanded ? 'opacity-100 w-auto translate-x-0' : 'opacity-0 w-0 -translate-x-2'
-      }`}
+      className={`transition-all duration-200 overflow-hidden ${isExpanded ? 'opacity-100 w-auto translate-x-0' : 'opacity-0 w-0 -translate-x-2'
+        }`}
     >
       <h1 className="text-base font-bold tracking-tight text-white whitespace-nowrap leading-none">
         FinArt
@@ -104,29 +103,26 @@ export const Sidebar: FC<SidebarProps> = ({
               key={item.path}
               to={item.path}
               onClick={() => onNavClick?.()}
-              className={`group flex items-center h-11 px-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-                isActive
-                  ? 'bg-white text-black font-semibold shadow-sm'
-                  : 'text-neutral-400 hover:text-black hover:bg-white'
-              }`}
+              className={`group flex items-center h-11 px-3 rounded-xl text-sm font-medium transition-all duration-150 ${isActive
+                ? 'bg-white text-black font-semibold shadow-sm'
+                : 'text-neutral-400 hover:text-black hover:bg-white'
+                }`}
               title={!isExpanded ? item.name : undefined}
             >
               {/* Icon - Always visible */}
               <div className="w-5 flex items-center justify-center shrink-0">
                 <Icon
-                  className={`w-5 h-5 transition-colors ${
-                    isActive ? 'text-black' : 'text-neutral-400 group-hover:text-black'
-                  }`}
+                  className={`w-5 h-5 transition-colors ${isActive ? 'text-black' : 'text-neutral-400 group-hover:text-black'
+                    }`}
                 />
               </div>
 
               {/* Name - Visible only when expanded / mobile */}
               <span
-                className={`ml-3.5 whitespace-nowrap overflow-hidden transition-all duration-200 ${
-                  isExpanded
-                    ? 'opacity-100 max-w-[160px] translate-x-0'
-                    : 'opacity-0 max-w-0 -translate-x-2'
-                }`}
+                className={`ml-3.5 whitespace-nowrap overflow-hidden transition-all duration-200 ${isExpanded
+                  ? 'opacity-100 max-w-[160px] translate-x-0'
+                  : 'opacity-0 max-w-0 -translate-x-2'
+                  }`}
               >
                 {item.name}
               </span>
@@ -139,9 +135,8 @@ export const Sidebar: FC<SidebarProps> = ({
       <div className="p-2.5 border-t border-neutral-800 overflow-hidden">
         {/* User Card */}
         <div
-          className={`flex items-center h-12 px-2.5 rounded-xl mb-1 transition-all ${
-            isExpanded ? 'bg-neutral-800/60' : ''
-          }`}
+          className={`flex items-center h-12 px-2.5 rounded-xl mb-1 transition-all ${isExpanded ? 'bg-neutral-800/60' : ''
+            }`}
         >
           <UserAvatar
             avatarUrl={user?.avatarUrl}
@@ -151,11 +146,10 @@ export const Sidebar: FC<SidebarProps> = ({
           />
 
           <div
-            className={`ml-3 overflow-hidden transition-all duration-200 ${
-              isExpanded
-                ? 'opacity-100 max-w-[160px] translate-x-0'
-                : 'opacity-0 max-w-0 -translate-x-2'
-            }`}
+            className={`ml-3 overflow-hidden transition-all duration-200 ${isExpanded
+              ? 'opacity-100 max-w-[160px] translate-x-0'
+              : 'opacity-0 max-w-0 -translate-x-2'
+              }`}
           >
             <p className="text-xs font-semibold text-white truncate leading-tight">
               {user?.name || 'My Account'}
@@ -178,11 +172,10 @@ export const Sidebar: FC<SidebarProps> = ({
           </div>
 
           <span
-            className={`ml-3.5 whitespace-nowrap overflow-hidden transition-all duration-200 ${
-              isExpanded
-                ? 'opacity-100 max-w-[160px] translate-x-0'
-                : 'opacity-0 max-w-0 -translate-x-2'
-            }`}
+            className={`ml-3.5 whitespace-nowrap overflow-hidden transition-all duration-200 ${isExpanded
+              ? 'opacity-100 max-w-[160px] translate-x-0'
+              : 'opacity-0 max-w-0 -translate-x-2'
+              }`}
           >
             Sign Out
           </span>
@@ -199,9 +192,8 @@ export const Sidebar: FC<SidebarProps> = ({
       <aside
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`hidden md:flex h-screen sticky top-0 flex-col justify-between bg-neutral-900 border-r border-neutral-800 z-40 select-none transition-all duration-300 ease-in-out ${
-          isHovered ? 'w-64 shadow-xl' : 'w-18'
-        } ${className}`}
+        className={`hidden md:flex h-screen sticky top-0 flex-col justify-between bg-neutral-900 border-r border-neutral-800 z-40 select-none transition-all duration-300 ease-in-out ${isHovered ? 'w-64 shadow-xl' : 'w-18'
+          } ${className}`}
         aria-label="Desktop Sidebar Navigation"
       >
         <div className="h-16 flex items-center px-4 border-b border-neutral-800 overflow-hidden shrink-0">
@@ -223,9 +215,8 @@ export const Sidebar: FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-neutral-900 flex flex-col justify-between border-r border-neutral-800 shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-neutral-900 flex flex-col justify-between border-r border-neutral-800 shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${isMobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
+          }`}
         aria-label="Mobile Sidebar Navigation"
         aria-hidden={!isMobileOpen}
       >
