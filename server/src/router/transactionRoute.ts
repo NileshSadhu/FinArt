@@ -1,0 +1,22 @@
+import { Router } from "express";
+import { requireAuth } from "../middlewares/requireAuth.js";
+import { authApiLimiter } from "../middlewares/rateLimiter.js";
+import {
+  createTransaction,
+  getAllTransactions,
+  getTransaction,
+  updateTransaction,
+  deleteTransaction,
+} from "../controllers/transaction.controller.js";
+
+const transactionRoute = Router();
+
+transactionRoute.use(requireAuth, authApiLimiter);
+
+transactionRoute.post("/", createTransaction);
+transactionRoute.get("/", getAllTransactions);
+transactionRoute.get("/:id", getTransaction);
+transactionRoute.patch("/:id", updateTransaction);
+transactionRoute.delete("/:id", deleteTransaction);
+
+export default transactionRoute;

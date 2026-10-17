@@ -3,6 +3,7 @@ import { userRepository } from "../db/repositories/user.repository.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getUserId } from "../utils/params.js";
 
 export const googleCallback = asyncHandler(
   async (req: Request, res: Response) => {
@@ -32,7 +33,7 @@ export const signOut = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const getMe = asyncHandler(async (req: Request, res: Response) => {
-  const userId = res.locals.userId as string;
+  const userId = getUserId(res);
 
   const user = await userRepository.findById(userId);
   if (!user) {

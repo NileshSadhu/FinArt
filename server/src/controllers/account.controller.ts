@@ -4,6 +4,9 @@ import { accountRepository } from "../db/repositories/account.repository.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getParamId, getUserId } from "../utils/params.js";
+import { parsePagination, buildPaginatedPayload } from "../utils/pagination.js";
+import { stripUndefined } from "../utils/object.js";
 import {
   createAccountSchema,
   updateAccountSchema,
@@ -33,22 +36,29 @@ async function withBalance(account: Account) {
   );
 }
 
-function getParamId(req: Request): string {
-  const id = req.params.id;
-  if (!id || typeof id !== "string")
-    throw new ApiError(400, "Invalid account ID");
-  return id;
-}
-
 // ── Controllers ───────────────────────────────────────────────────────────────
 
 export const createAccount = asyncHandler(
   async (req: Request, res: Response) => {
     const parsed = createAccountSchema.safeParse(req.body);
-    if (!parsed.success)
+    if (!parsed.success) {
       throw new ApiError(400, "Validation failed", parsed.error.issues);
+    }
 
-    const userId = res.locals.userId as string;
+    const userId = getUserId(res);
+
+    // Check for duplicate active account name for this user
+    const userAccounts = await accountRepository.findAllByUser(userId, true);
+    const hasDuplicate = userAccounts.some(
+      (a) => a.isActive && a.name.toLowerCase() === parsed.data.name.toLowerCase(),
+    );
+    if (hasDuplicate) {
+      throw new ApiError(
+        409,
+        `An active account with the name "${parsed.data.name}" already exists.`,
+      );
+    }
+
     const account = await accountRepository.create({ userId, ...parsed.data });
 
     return res
@@ -60,10 +70,9 @@ export const createAccount = asyncHandler(
 );
 
 export const getAccounts = asyncHandler(async (req: Request, res: Response) => {
-  const userId = res.locals.userId as string;
+  const userId = getUserId(res);
   const includeInactive = req.query.includeInactive === "true";
-  const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10) || 10));
+  const { page, limit } = parsePagination(req.query);
 
   const [accounts, total] = await accountRepository.findPaginatedByUser({
     userId,
@@ -77,24 +86,20 @@ export const getAccounts = asyncHandler(async (req: Request, res: Response) => {
     toResponse(a, a.openingBalance.toNumber() + (sums.get(a.id) ?? 0)),
   );
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        accounts: data,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-      "Accounts fetched",
-    ),
-  );
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        buildPaginatedPayload("accounts", data, total, page, limit),
+        "Accounts fetched",
+      ),
+    );
 });
 
 export const getAccount = asyncHandler(async (req: Request, res: Response) => {
-  const userId = res.locals.userId as string;
-  const id = getParamId(req);
+  const userId = getUserId(res);
+  const id = getParamId(req, "id", "account ID");
   const account = await accountRepository.findByIdAndUser(id, userId);
   if (!account) throw new ApiError(404, "Account not found");
 
@@ -105,18 +110,62 @@ export const getAccount = asyncHandler(async (req: Request, res: Response) => {
 
 export const updateAccount = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = res.locals.userId as string;
-    const id = getParamId(req);
+    const userId = getUserId(res);
+    const id = getParamId(req, "id", "account ID");
     const existing = await accountRepository.findByIdAndUser(id, userId);
     if (!existing) throw new ApiError(404, "Account not found");
 
     const parsed = updateAccountSchema.safeParse(req.body);
-    if (!parsed.success)
+    if (!parsed.success) {
       throw new ApiError(400, "Validation failed", parsed.error.issues);
+    }
 
-    // Strip undefined keys – required by exactOptionalPropertyTypes
-    const patch = Object.fromEntries(
-      Object.entries(parsed.data).filter(([, v]) => v !== undefined),
+    // Check duplicate name if name is being changed
+    if (
+      parsed.data.name &&
+      parsed.data.name.toLowerCase() !== existing.name.toLowerCase()
+    ) {
+      const userAccounts = await accountRepository.findAllByUser(userId, true);
+      const hasDuplicate = userAccounts.some(
+        (a) =>
+          a.id !== id &&
+          a.isActive &&
+          a.name.toLowerCase() === parsed.data.name!.toLowerCase(),
+      );
+      if (hasDuplicate) {
+        throw new ApiError(
+          409,
+          `An active account with the name "${parsed.data.name}" already exists.`,
+        );
+      }
+    }
+
+    // Protect historical financial integrity
+    const hasHistory = await accountRepository.hasFinancialHistory(id);
+    if (hasHistory) {
+      if (
+        parsed.data.openingBalance !== undefined &&
+        parsed.data.openingBalance !== existing.openingBalance.toNumber()
+      ) {
+        throw new ApiError(
+          400,
+          "Cannot modify opening balance of an account with financial history. Use an ADJUSTMENT transaction instead.",
+        );
+      }
+
+      if (
+        parsed.data.currency !== undefined &&
+        parsed.data.currency !== existing.currency
+      ) {
+        throw new ApiError(
+          400,
+          "Cannot change currency of an account with existing transactions.",
+        );
+      }
+    }
+
+    const patch = stripUndefined(
+      parsed.data,
     ) as Parameters<typeof accountRepository.update>[2];
 
     const account = await accountRepository.update(id, userId, patch);
@@ -131,8 +180,8 @@ export const updateAccount = asyncHandler(
 
 export const deleteAccount = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = res.locals.userId as string;
-    const id = getParamId(req);
+    const userId = getUserId(res);
+    const id = getParamId(req, "id", "account ID");
     const account = await accountRepository.findByIdAndUser(id, userId);
     if (!account) throw new ApiError(404, "Account not found");
 

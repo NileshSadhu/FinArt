@@ -43,6 +43,25 @@ const defaultInclude = {
   receipts: true,
 } satisfies Prisma.TransactionInclude;
 
+function buildTransactionWhere(
+  filters: TransactionFilters,
+): Prisma.TransactionWhereInput {
+  const { userId, type, categoryId, fromDate, toDate } = filters;
+  return {
+    userId,
+    ...(type ? { type } : {}),
+    ...(categoryId ? { categoryId } : {}),
+    ...(fromDate || toDate
+      ? {
+          transactionDate: {
+            ...(fromDate ? { gte: fromDate } : {}),
+            ...(toDate ? { lte: toDate } : {}),
+          },
+        }
+      : {}),
+  };
+}
+
 // ── Repository ───────────────────────────────────────────────────────────────
 
 export const transactionRepository = {
@@ -51,21 +70,7 @@ export const transactionRepository = {
     filters: TransactionFilters,
     options: { skip?: number; take?: number } = {},
   ) {
-    const { userId, type, categoryId, fromDate, toDate } = filters;
-    const where: Prisma.TransactionWhereInput = {
-      userId,
-      ...(type ? { type } : {}),
-      ...(categoryId ? { categoryId } : {}),
-      ...(fromDate || toDate
-        ? {
-            transactionDate: {
-              ...(fromDate ? { gte: fromDate } : {}),
-              ...(toDate ? { lte: toDate } : {}),
-            },
-          }
-        : {}),
-    };
-
+    const where = buildTransactionWhere(filters);
     return prisma.transaction.findMany({
       where,
       include: defaultInclude,
@@ -77,21 +82,9 @@ export const transactionRepository = {
 
   /** Count transactions matching the same filters (for pagination). */
   count(filters: TransactionFilters): Promise<number> {
-    const { userId, type, categoryId, fromDate, toDate } = filters;
+    const where = buildTransactionWhere(filters);
     return prisma.transaction.count({
-      where: {
-        userId,
-        ...(type ? { type } : {}),
-        ...(categoryId ? { categoryId } : {}),
-        ...(fromDate || toDate
-          ? {
-              transactionDate: {
-                ...(fromDate ? { gte: fromDate } : {}),
-                ...(toDate ? { lte: toDate } : {}),
-              },
-            }
-          : {}),
-      },
+      where,
     });
   },
 
