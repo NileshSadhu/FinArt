@@ -84,8 +84,7 @@ export const Account = () => {
         ? "Character limit reached"
         : "",
     );
-    const num = Math.abs(account.openingBalance ?? 0);
-    setBalanceError(num >= MAX_ACCOUNT_BALANCE ? "Amount limit reached" : "");
+    setBalanceError("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -109,7 +108,7 @@ export const Account = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const nError = validateAccountName(name);
-    const bError = validateOpeningBalance(openingBalance);
+    const bError = editingAccount ? "" : validateOpeningBalance(openingBalance);
 
     if (nError || bError) {
       setNameError(nError || "");
@@ -121,14 +120,11 @@ export const Account = () => {
     setBalanceError("");
     setIsSubmitting(true);
 
-    const numericBalance = parseFormattedNumber(openingBalance);
-
     try {
       if (editingAccount) {
         await accountService.updateAccount(editingAccount.id, {
           name: name.trim(),
           currency,
-          openingBalance: numericBalance,
         });
 
         toast.success("Account updated successfully");
@@ -139,7 +135,7 @@ export const Account = () => {
           name: name.trim(),
           type,
           currency,
-          openingBalance: numericBalance,
+          openingBalance: parseFormattedNumber(openingBalance),
         });
 
         toast.success("Account created successfully");
@@ -330,40 +326,49 @@ export const Account = () => {
             />
 
             {/* Opening Balance */}
-            <CustomInput
-              label="Opening Balance"
-              type="text"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={openingBalance}
-              onChange={(e) => {
-                const rawVal = e.target.value.replace(/,/g, "");
-                if (/^-?\d*\.?\d*$/.test(rawVal)) {
-                  if (
-                    rawVal === "" ||
-                    rawVal === "-" ||
-                    rawVal === "." ||
-                    rawVal === "-."
-                  ) {
-                    setOpeningBalance(rawVal);
-                    if (balanceError) setBalanceError("");
-                    return;
-                  }
+            <div>
+              <CustomInput
+                label="Opening Balance"
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={openingBalance}
+                disabled={!!editingAccount}
+                onChange={(e) => {
+                  const rawVal = e.target.value.replace(/,/g, "");
+                  if (/^-?\d*\.?\d*$/.test(rawVal)) {
+                    if (
+                      rawVal === "" ||
+                      rawVal === "-" ||
+                      rawVal === "." ||
+                      rawVal === "-."
+                    ) {
+                      setOpeningBalance(rawVal);
+                      if (balanceError) setBalanceError("");
+                      return;
+                    }
 
-                  const num = parseFormattedNumber(rawVal);
-                  if (Math.abs(num) >= MAX_ACCOUNT_BALANCE) {
-                    const clamped =
-                      num < 0 ? -MAX_ACCOUNT_BALANCE : MAX_ACCOUNT_BALANCE;
-                    setOpeningBalance(formatNumberWithCommas(clamped));
-                    setBalanceError("Amount limit reached");
-                  } else {
-                    setOpeningBalance(formatNumberWithCommas(rawVal));
-                    if (balanceError) setBalanceError("");
+                    const num = parseFormattedNumber(rawVal);
+                    if (Math.abs(num) >= MAX_ACCOUNT_BALANCE) {
+                      const clamped =
+                        num < 0 ? -MAX_ACCOUNT_BALANCE : MAX_ACCOUNT_BALANCE;
+                      setOpeningBalance(formatNumberWithCommas(clamped));
+                      setBalanceError("Amount limit reached");
+                    } else {
+                      setOpeningBalance(formatNumberWithCommas(rawVal));
+                      if (balanceError) setBalanceError("");
+                    }
                   }
-                }
-              }}
-              error={balanceError}
-            />
+                }}
+                error={balanceError}
+              />
+              {editingAccount && (
+                <p className="mt-1.5 text-xs text-red-600 leading-tight">
+                  Changing the opening balance can silently alter historical
+                  balances.
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center justify-end gap-2.5 pt-2">
