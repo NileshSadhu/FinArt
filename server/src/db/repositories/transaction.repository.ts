@@ -11,6 +11,7 @@ export interface TransactionFilters {
   userId: string;
   type?: TransactionType;
   categoryId?: string;
+  accountId?: string;
   /** ISO date string – inclusive lower bound on transactionDate */
   fromDate?: Date;
   /** ISO date string – inclusive upper bound on transactionDate */
@@ -46,11 +47,12 @@ const defaultInclude = {
 function buildTransactionWhere(
   filters: TransactionFilters,
 ): Prisma.TransactionWhereInput {
-  const { userId, type, categoryId, fromDate, toDate } = filters;
+  const { userId, type, categoryId, accountId, fromDate, toDate } = filters;
   return {
     userId,
     ...(type ? { type } : {}),
     ...(categoryId ? { categoryId } : {}),
+    ...(accountId ? { entries: { some: { accountId } } } : {}),
     ...(fromDate || toDate
       ? {
           transactionDate: {

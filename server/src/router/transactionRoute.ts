@@ -6,6 +6,7 @@ import {
   getAllTransactions,
   getTransaction,
   updateTransaction,
+  cancelTransaction,
   deleteTransaction,
 } from "../controllers/transaction.controller.js";
 
@@ -17,6 +18,7 @@ transactionRoute.post("/", createTransaction);
 transactionRoute.get("/", getAllTransactions);
 transactionRoute.get("/:id", getTransaction);
 transactionRoute.patch("/:id", updateTransaction);
+transactionRoute.post("/:id/cancel", cancelTransaction);
 transactionRoute.delete("/:id", deleteTransaction);
 
 export default transactionRoute;
