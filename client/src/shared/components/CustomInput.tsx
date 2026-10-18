@@ -1,5 +1,34 @@
 import { forwardRef, useId, type InputHTMLAttributes, type SelectHTMLAttributes, type ReactNode } from 'react';
 
+export interface FieldLabelProps {
+  htmlFor?: string;
+  label?: ReactNode;
+  required?: boolean;
+  className?: string;
+}
+
+export const FieldLabel = ({
+  htmlFor,
+  label,
+  required,
+  className = '',
+}: FieldLabelProps) => {
+  if (!label) return null;
+  return (
+    <label
+      htmlFor={htmlFor}
+      className={`text-sm font-medium text-neutral-800 select-none ${className}`}
+    >
+      {label}
+      {required && (
+        <span className="text-red-500 ml-1 font-semibold select-none" aria-hidden="true">
+          *
+        </span>
+      )}
+    </label>
+  );
+};
+
 export interface CustomInputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: ReactNode;
   placeholder?: string;
@@ -17,6 +46,7 @@ export const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
       helperText,
       id,
       disabled,
+      required,
       className = '',
       containerClassName = '',
       ...rest
@@ -29,9 +59,7 @@ export const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
     return (
       <div className={`w-full flex flex-col gap-1.5 ${containerClassName}`}>
         {label && (
-          <label htmlFor={inputId} className="text-sm font-medium text-neutral-800 select-none">
-            {label}
-          </label>
+          <FieldLabel htmlFor={inputId} label={label} required={required} />
         )}
 
         <input
@@ -39,6 +67,7 @@ export const CustomInput = forwardRef<HTMLInputElement, CustomInputProps>(
           id={inputId}
           placeholder={placeholder}
           disabled={disabled}
+          required={required}
           className={`w-full h-11 px-3.5 rounded-xl border bg-white text-sm text-neutral-900 placeholder:text-neutral-400 transition-all duration-150 focus:outline-none ${
             error
               ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/10'
@@ -84,6 +113,7 @@ export const CustomSelect = forwardRef<HTMLSelectElement, CustomSelectProps>(
       helperText,
       id,
       disabled,
+      required,
       className = '',
       containerClassName = '',
       ...rest
@@ -96,9 +126,7 @@ export const CustomSelect = forwardRef<HTMLSelectElement, CustomSelectProps>(
     return (
       <div className={`w-full flex flex-col gap-1.5 ${containerClassName}`}>
         {label && (
-          <label htmlFor={selectId} className="text-sm font-medium text-neutral-800 select-none">
-            {label}
-          </label>
+          <FieldLabel htmlFor={selectId} label={label} required={required} />
         )}
 
         <select

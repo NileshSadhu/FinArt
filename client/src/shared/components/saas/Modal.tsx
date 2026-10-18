@@ -66,13 +66,15 @@ export const Modal: FC<ModalProps> = ({
   const config = type !== 'default' ? typeConfig[type] : null;
   const Icon = config?.icon;
 
+  const hasCustomMaxWidth = className && /\bmax-w-/.test(className);
+
   return createPortal(
     <div
       onClick={(e) => e.target === e.currentTarget && onClose()}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
     >
       <div
-        className={`relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl border border-neutral-100 ${className}`}
+        className={`relative w-full ${hasCustomMaxWidth ? '' : 'max-w-sm'} rounded-2xl bg-white p-6 shadow-xl border border-neutral-100 ${className}`}
       >
         <button
           type="button"

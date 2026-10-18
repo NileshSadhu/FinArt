@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+﻿import { createBrowserRouter, Navigate } from "react-router-dom";
 import WebLayout from "../layouts/WebLayout";
 import LandingPage from "../../pages/web/LandingPage";
 import PricingPage from "../../pages/web/PricingPage";
@@ -8,6 +8,7 @@ import SignInPage from "../../pages/auth/SignInPage";
 import AuthCallbackPage from "../../pages/auth/AuthCallbackPage";
 import DashboardPage from "../../pages/DashboardPage";
 import Account from "../../pages/saas/Account";
+import Transaction from "../../pages/saas/Transaction";
 import FinArtLayout from "../layouts/FinArtLayout";
 import { PublicOnlyRoute, ProtectedRoute } from "./routeGuards";
 
@@ -77,7 +78,15 @@ export const router = createBrowserRouter([
                         <Account />
                     </ProtectedRoute>
                 )
+            },
+            {
+                path: "/transactions",
+                element: (
+                    <ProtectedRoute>
+                        <Transaction />
+                    </ProtectedRoute>
+                )
             }
         ]
     }
-]);
+]);

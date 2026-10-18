@@ -12,4 +12,13 @@ export const ApiPath = {
         base: '/accounts',
         byId: (id: string) => `/accounts/${id}`,
     },
+    transactions: {
+        base: '/transactions',
+        byId: (id: string) => `/transactions/${id}`,
+        cancel: (id: string) => `/transactions/${id}/cancel`,
+    },
+    categories: {
+        base: '/categories',
+        byId: (id: string) => `/categories/${id}`,
+    },
 } as const;

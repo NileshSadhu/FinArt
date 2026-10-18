@@ -20,6 +20,7 @@ import {
   formatNumberWithCommas,
   parseFormattedNumber,
   formatCurrency,
+  getApiErrorMessage,
   ACCOUNT_NAME_MAX_LENGTH,
   MAX_ACCOUNT_BALANCE,
 } from "../../shared/utils/validation";
@@ -145,13 +146,9 @@ export const Account = () => {
         setPage(1);
       }
     } catch (err: unknown) {
-      const errorMsg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ||
-        (editingAccount
-          ? "Failed to update account"
-          : "Failed to create account");
-      toast.error(errorMsg);
+      toast.error(
+        getApiErrorMessage(err, editingAccount ? "Failed to update account" : "Failed to create account")
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -173,10 +170,7 @@ export const Account = () => {
       setAccountToDelete(null);
       await fetchAccounts(page);
     } catch (err: unknown) {
-      const errorMsg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "Failed to delete account";
-      toast.error(errorMsg);
+      toast.error(getApiErrorMessage(err, "Failed to delete account"));
     } finally {
       setIsDeleting(false);
     }
