@@ -52,18 +52,28 @@ export function parseDateRange(
 ): { fromDate?: Date; toDate?: Date } {
   let fromDate: Date | undefined;
   if (typeof fromDateQuery === "string" && fromDateQuery.trim().length > 0) {
-    const parsed = new Date(fromDateQuery.trim());
+    const str = fromDateQuery.trim();
+    const parsed = new Date(str);
     if (isNaN(parsed.getTime())) {
       throw new ApiError(400, "Invalid fromDate format");
+    }
+    // If only YYYY-MM-DD was provided, set to beginning of that day
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      parsed.setUTCHours(0, 0, 0, 0);
     }
     fromDate = parsed;
   }
 
   let toDate: Date | undefined;
   if (typeof toDateQuery === "string" && toDateQuery.trim().length > 0) {
-    const parsed = new Date(toDateQuery.trim());
+    const str = toDateQuery.trim();
+    const parsed = new Date(str);
     if (isNaN(parsed.getTime())) {
       throw new ApiError(400, "Invalid toDate format");
+    }
+    // If only YYYY-MM-DD was provided, set to end of that day (23:59:59.999) so transactions on that day are included
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      parsed.setUTCHours(23, 59, 59, 999);
     }
     toDate = parsed;
   }

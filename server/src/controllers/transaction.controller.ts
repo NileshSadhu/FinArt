@@ -146,8 +146,11 @@ export const getAllTransactions = asyncHandler(
     const { page, limit, skip } = parsePagination(req.query);
 
     let type: TransactionType | undefined;
-    if (typeof req.query.type === "string") {
-      const upperType = req.query.type.toUpperCase();
+    if (
+      typeof req.query.type === "string" &&
+      req.query.type.trim().length > 0
+    ) {
+      const upperType = req.query.type.trim().toUpperCase();
       if ((TRANSACTION_TYPES as readonly string[]).includes(upperType)) {
         type = upperType as TransactionType;
       } else {
