@@ -8,6 +8,7 @@ import {
   updateTransaction,
   cancelTransaction,
   deleteTransaction,
+  exportTransactions,
 } from "../controllers/transaction.controller.js";
 
 const transactionRoute = Router();
@@ -15,6 +16,7 @@ const transactionRoute = Router();
 transactionRoute.use(requireAuth, authApiLimiter);
 
 transactionRoute.post("/", createTransaction);
+transactionRoute.get("/export", exportTransactions);
 transactionRoute.get("/", getAllTransactions);
 transactionRoute.get("/:id", getTransaction);
 transactionRoute.patch("/:id", updateTransaction);

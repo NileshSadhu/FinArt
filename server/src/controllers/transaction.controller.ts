@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import type { TransactionType } from "../generated/prisma/client.js";
+import ExcelJS from "exceljs";
 import { prisma } from "../db/client.js";
 import { accountRepository } from "../db/repositories/account.repository.js";
 import { categoryRepository } from "../db/repositories/category.repository.js";
@@ -23,6 +24,67 @@ import {
   transactionSchema,
   updateTransactionSchema,
 } from "../validators/transaction.validator.js";
+
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+function solidFill(argb: string): ExcelJS.Fill {
+  return { type: "pattern", pattern: "solid", fgColor: { argb } };
+}
+
+function parseTransactionFilters(
+  req: Request,
+  userId: string,
+): TransactionFilters {
+  let type: TransactionType | undefined;
+  if (
+    typeof req.query.type === "string" &&
+    req.query.type.trim().length > 0
+  ) {
+    const upperType = req.query.type.trim().toUpperCase();
+    if ((TRANSACTION_TYPES as readonly string[]).includes(upperType)) {
+      type = upperType as TransactionType;
+    } else {
+      throw new ApiError(400, `Invalid transaction type: ${req.query.type}`);
+    }
+  }
+
+  let categoryId: string | undefined;
+  if (
+    typeof req.query.categoryId === "string" &&
+    req.query.categoryId.trim().length > 0
+  ) {
+    categoryId = req.query.categoryId.trim();
+  }
+
+  let accountId: string | undefined;
+  if (
+    typeof req.query.accountId === "string" &&
+    req.query.accountId.trim().length > 0
+  ) {
+    const trimmed = req.query.accountId.trim();
+    if (!isValidUuid(trimmed)) {
+      throw new ApiError(
+        400,
+        "Invalid accountId format (must be a valid UUID)",
+      );
+    }
+    accountId = trimmed;
+  }
+
+  const { fromDate, toDate } = parseDateRange(
+    req.query.fromDate,
+    req.query.toDate,
+  );
+
+  return {
+    userId,
+    ...(type !== undefined ? { type } : {}),
+    ...(categoryId !== undefined ? { categoryId } : {}),
+    ...(accountId !== undefined ? { accountId } : {}),
+    ...(fromDate !== undefined ? { fromDate } : {}),
+    ...(toDate !== undefined ? { toDate } : {}),
+  };
+}
 
 // ── Controllers ───────────────────────────────────────────────────────────────
 
@@ -144,56 +206,7 @@ export const getAllTransactions = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = getUserId(res);
     const { page, limit, skip } = parsePagination(req.query);
-
-    let type: TransactionType | undefined;
-    if (
-      typeof req.query.type === "string" &&
-      req.query.type.trim().length > 0
-    ) {
-      const upperType = req.query.type.trim().toUpperCase();
-      if ((TRANSACTION_TYPES as readonly string[]).includes(upperType)) {
-        type = upperType as TransactionType;
-      } else {
-        throw new ApiError(400, `Invalid transaction type: ${req.query.type}`);
-      }
-    }
-
-    let categoryId: string | undefined;
-    if (
-      typeof req.query.categoryId === "string" &&
-      req.query.categoryId.trim().length > 0
-    ) {
-      categoryId = req.query.categoryId.trim();
-    }
-
-    let accountId: string | undefined;
-    if (
-      typeof req.query.accountId === "string" &&
-      req.query.accountId.trim().length > 0
-    ) {
-      const trimmed = req.query.accountId.trim();
-      if (!isValidUuid(trimmed)) {
-        throw new ApiError(
-          400,
-          "Invalid accountId format (must be a valid UUID)",
-        );
-      }
-      accountId = trimmed;
-    }
-
-    const { fromDate, toDate } = parseDateRange(
-      req.query.fromDate,
-      req.query.toDate,
-    );
-
-    const filters: TransactionFilters = {
-      userId,
-      ...(type !== undefined ? { type } : {}),
-      ...(categoryId !== undefined ? { categoryId } : {}),
-      ...(accountId !== undefined ? { accountId } : {}),
-      ...(fromDate !== undefined ? { fromDate } : {}),
-      ...(toDate !== undefined ? { toDate } : {}),
-    };
+    const filters = parseTransactionFilters(req, userId);
 
     const [transactions, total] = await Promise.all([
       transactionRepository.findMany(filters, { skip, take: limit }),
@@ -344,5 +357,232 @@ export const deleteTransaction = asyncHandler(
     return res
       .status(200)
       .json(new ApiResponse(200, null, "Transaction deleted"));
+  },
+);
+
+// ── Export Transactions to XLSX ───────────────────────────────────────────────
+
+export const exportTransactions = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(res);
+
+    // ── Parse filters via shared helper (same params as getAllTransactions) ───
+    const filters = parseTransactionFilters(req, userId);
+    const { type, categoryId, accountId, fromDate, toDate } = filters;
+
+    // ── Fetch ALL matching transactions (no pagination) ──────────────────────
+    const transactions = await transactionRepository.findMany(filters, {
+      skip: 0,
+      take: 100_000,
+    });
+
+    // ── Resolve human-readable filter labels ─────────────────────────────────
+    type FilterRow = { label: string; value: string };
+    const filterRows: FilterRow[] = [];
+
+    if (type) {
+      filterRows.push({ label: "Transaction Type", value: type });
+    }
+
+    if (accountId) {
+      // Try to resolve account name from first transaction entry
+      const matchedEntry = transactions
+        .flatMap((t) => t.entries)
+        .find((e) => e.accountId === accountId);
+      const accountName =
+        (matchedEntry as { account?: { name?: string } } | undefined)?.account?.name ??
+        accountId;
+      filterRows.push({ label: "Account", value: accountName });
+    }
+
+    if (categoryId) {
+      const matchedTx = transactions.find((t) => t.categoryId === categoryId);
+      const catName =
+        (matchedTx?.category as { name?: string } | null | undefined)?.name ?? categoryId;
+      filterRows.push({ label: "Category", value: catName });
+    }
+
+    if (fromDate) {
+      filterRows.push({
+        label: "From Date",
+        value: fromDate.toISOString().split("T")[0] ?? "",
+      });
+    }
+
+    if (toDate) {
+      filterRows.push({
+        label: "To Date",
+        value: toDate.toISOString().split("T")[0] ?? "",
+      });
+    }
+
+    if (filterRows.length === 0) {
+      filterRows.push({ label: "Filter", value: "All Transactions (No Filter Applied)" });
+    }
+
+    // ── Build Workbook ────────────────────────────────────────────────────────
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "FinArt";
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet("Transactions", {
+      pageSetup: { paperSize: 9, orientation: "landscape" },
+    });
+
+    // Column widths
+    sheet.columns = [
+      { key: "A", width: 2 },   // buffer
+      { key: "B", width: 18 },  // filter label / Date
+      { key: "C", width: 32 },  // filter value / Description
+      { key: "D", width: 14 },  // Type
+      { key: "E", width: 18 },  // Category
+      { key: "F", width: 28 },  // Accounts
+      { key: "G", width: 16 },  // Amount
+      { key: "H", width: 26 },  // Reference
+      { key: "I", width: 30 },  // Notes
+    ];
+
+    // ── FinArt Title Banner ───────────────────────────────────────────────────
+    // Row 1 – Main title
+    const titleRow = sheet.addRow([null, "FinArt Expenses Sheet"]);
+    titleRow.height = 36;
+    sheet.mergeCells(`B${titleRow.number}:I${titleRow.number}`);
+    const titleCell = titleRow.getCell(2);
+    titleCell.fill = solidFill("FF111827");
+    titleCell.font = { bold: true, size: 16, color: { argb: "FFFFFFFF" }, name: "Calibri" };
+    titleCell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+
+    // Row 2 – Sub-title with export date
+    const exportedOn = new Date().toLocaleString("en-IN", {
+      dateStyle: "long",
+      timeStyle: "short",
+    });
+    const subTitleRow = sheet.addRow([null, `Exported on: ${exportedOn}`]);
+    subTitleRow.height = 20;
+    sheet.mergeCells(`B${subTitleRow.number}:I${subTitleRow.number}`);
+    const subTitleCell = subTitleRow.getCell(2);
+    subTitleCell.fill = solidFill("FF1F2937");
+    subTitleCell.font = { size: 9, color: { argb: "FF9CA3AF" }, italic: true };
+    subTitleCell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+
+    // Row 3 – blank spacer
+    sheet.addRow([]);
+
+    // ── Filter Info Section ───────────────────────────────────────────────────
+    filterRows.forEach(({ label, value }) => {
+      const row = sheet.addRow([null, label, value]);
+      row.height = 18;
+
+      const labelCell = row.getCell(2);
+      labelCell.fill = solidFill("FFF3F4F6");
+      labelCell.font = { bold: true, size: 10, color: { argb: "FF374151" } };
+      labelCell.alignment = { vertical: "middle", horizontal: "left" };
+      labelCell.border = {
+        top: { style: "thin", color: { argb: "FFE5E7EB" } },
+        left: { style: "thin", color: { argb: "FFE5E7EB" } },
+        bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
+      };
+
+      const valueCell = row.getCell(3);
+      valueCell.fill = solidFill("FFFFFFFF");
+      valueCell.font = { size: 10, color: { argb: "FF111827" } };
+      valueCell.alignment = { vertical: "middle", horizontal: "left" };
+      valueCell.border = {
+        top: { style: "thin", color: { argb: "FFE5E7EB" } },
+        right: { style: "thin", color: { argb: "FFE5E7EB" } },
+        bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
+      };
+    });
+
+    // ── Blank separator row ───────────────────────────────────────────────────
+    sheet.addRow([]);
+
+    // ── Table Header Row ──────────────────────────────────────────────────────
+    const headerRow = sheet.addRow([
+      null, "Date", "Description", "Type", "Category", "Accounts", "Amount", "Reference", "Notes",
+    ]);
+    headerRow.height = 22;
+    headerRow.eachCell((cell, colNum) => {
+      if (colNum < 2) return;
+      cell.fill = solidFill("FF111827");
+      cell.font = { bold: true, size: 10, color: { argb: "FFFFFFFF" } };
+      cell.alignment = { vertical: "middle", horizontal: "center", wrapText: false };
+      cell.border = {
+        top: { style: "thin", color: { argb: "FF374151" } },
+        left: { style: "thin", color: { argb: "FF374151" } },
+        bottom: { style: "thin", color: { argb: "FF374151" } },
+        right: { style: "thin", color: { argb: "FF374151" } },
+      };
+    });
+
+    // ── Data Rows ─────────────────────────────────────────────────────────────
+    const evenFill = solidFill("FFFFFFFF");
+    const oddFill = solidFill("FFF9FAFB");
+
+    transactions.forEach((tx, idx) => {
+      // Resolve display amount: the largest positive entry amount
+      const entries = tx.entries as Array<{ amount: { toNumber?: () => number } | number; accountId: string; account?: { name?: string } }>;
+      const displayAmt = entries.reduce((max, e) => {
+        const v = typeof e.amount === "object" && e.amount !== null && typeof (e.amount as { toNumber?: () => number }).toNumber === "function"
+          ? (e.amount as { toNumber: () => number }).toNumber()
+          : Number(e.amount);
+        return Math.abs(v) > Math.abs(max) ? v : max;
+      }, 0);
+
+      const accountNames = entries
+        .map((e) => e.account?.name ?? e.accountId)
+        .join(", ");
+
+      const dateVal = tx.transactionDate instanceof Date
+        ? tx.transactionDate.toISOString().split("T")[0]
+        : String(tx.transactionDate).split("T")[0];
+
+      const row = sheet.addRow([
+        null,
+        dateVal,
+        tx.description,
+        tx.type,
+        (tx.category as { name?: string } | null)?.name ?? "",
+        accountNames,
+        displayAmt,
+        tx.reference ?? "",
+        tx.notes ?? "",
+      ]);
+
+      row.height = 18;
+      const fill = idx % 2 === 0 ? evenFill : oddFill;
+
+      row.eachCell((cell, colNum) => {
+        if (colNum < 2) return;
+        cell.fill = fill;
+        cell.font = { size: 10, color: { argb: "FF111827" } };
+        cell.alignment = { vertical: "middle", horizontal: colNum === 7 ? "right" : "left" };
+        cell.border = {
+          top: { style: "hair", color: { argb: "FFE5E7EB" } },
+          left: { style: "hair", color: { argb: "FFE5E7EB" } },
+          bottom: { style: "hair", color: { argb: "FFE5E7EB" } },
+          right: { style: "hair", color: { argb: "FFE5E7EB" } },
+        };
+
+        // Format Amount column as number
+        if (colNum === 7) {
+          cell.numFmt = '#,##0.00';
+        }
+      });
+    });
+
+    // ── Stream response ───────────────────────────────────────────────────────
+    const filename = `transactions_export_${new Date().toISOString().split("T")[0]}.xlsx`;
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${filename}"`,
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
   },
 );
