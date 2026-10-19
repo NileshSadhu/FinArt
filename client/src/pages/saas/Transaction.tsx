@@ -8,6 +8,7 @@ import {
   X,
   TrendingUp,
   TrendingDown,
+  Download,
 } from "lucide-react";
 import PageHeader from "../../shared/components/saas/PageHeader";
 import CustomInput, {
@@ -18,6 +19,7 @@ import CustomBtn from "../../shared/components/CustomBtn";
 import Table, { type TableColumn } from "../../shared/components/saas/Table";
 import Pagination from "../../shared/components/saas/Pagination";
 import Modal from "../../shared/components/saas/Modal";
+import ExportConfirmModal from "../../shared/components/saas/ExportConfirmModal";
 import transactionService, {
   TRANSACTION_TYPES,
   type Transaction as TxItem,
@@ -94,6 +96,10 @@ export const Transaction = () => {
   const [txToDelete, setTxToDelete] = useState<TxItem | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // ── Export
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // ── Filter panel
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -378,11 +384,37 @@ export const Transaction = () => {
 
   const hasActiveFilters = Boolean(
     filters.type ||
-      filters.accountId ||
-      filters.categoryId ||
-      filters.fromDate ||
-      filters.toDate,
+    filters.accountId ||
+    filters.categoryId ||
+    filters.fromDate ||
+    filters.toDate,
   );
+
+  // ── Open export confirmation modal (or warn if nothing to export)
+  const handleExport = () => {
+    if (total === 0) {
+      toast("There is nothing to export — no transactions match the current view.", {
+        icon: "📭",
+        duration: 4000,
+      });
+      return;
+    }
+    setIsExportModalOpen(true);
+  };
+
+  // ── Actual download after user confirms
+  const handleConfirmExport = async () => {
+    setIsExporting(true);
+    try {
+      await transactionService.exportTransactions(filters);
+      setIsExportModalOpen(false);
+      toast.success("Transactions exported successfully");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to export transactions"));
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // ── Derived data for selects
   const filteredCategories = categories.filter((c) =>
@@ -478,13 +510,12 @@ export const Transaction = () => {
         const isExpense = tx.type === "EXPENSE";
         return (
           <span
-            className={`font-semibold tabular-nums text-sm ${
-              isIncome
+            className={`font-semibold tabular-nums text-sm ${isIncome
                 ? "text-emerald-700"
                 : isExpense
                   ? "text-red-700"
                   : "text-neutral-900"
-            }`}
+              }`}
           >
             {isExpense ? "−" : isIncome ? "+" : ""}
             {formatCurrency(amt, currency)}
@@ -532,15 +563,27 @@ export const Transaction = () => {
         title="Transactions"
         subtitle="Record and track your financial transactions across all accounts."
         btn={
-          <CustomBtn
-            variant="primary"
-            size="md"
-            leftIcon={<Plus className="w-4 h-4" />}
-            onClick={openAddModal}
-            disabled={refLoading}
-          >
-            Add Transaction
-          </CustomBtn>
+          <>
+            <CustomBtn
+              variant="secondary"
+              size="md"
+              leftIcon={<Download className="w-4 h-4" />}
+              onClick={handleExport}
+              isLoading={isExporting}
+              disabled={isExporting}
+            >
+              Export
+            </CustomBtn>
+            <CustomBtn
+              variant="primary"
+              size="md"
+              leftIcon={<Plus className="w-4 h-4" />}
+              onClick={openAddModal}
+              disabled={refLoading}
+            >
+              Add Transaction
+            </CustomBtn>
+          </>
         }
       />
 
@@ -549,11 +592,10 @@ export const Transaction = () => {
         <button
           type="button"
           onClick={() => setIsFilterOpen(!isFilterOpen)}
-          className={`inline-flex items-center gap-2 h-9 px-4 rounded-full text-sm font-medium border transition-colors cursor-pointer ${
-            hasActiveFilters
+          className={`inline-flex items-center gap-2 h-9 px-4 rounded-full text-sm font-medium border transition-colors cursor-pointer ${hasActiveFilters
               ? "bg-black text-white border-black"
               : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-100"
-          }`}
+            }`}
         >
           <Filter className="w-4 h-4" />
           Filters
@@ -719,11 +761,10 @@ export const Transaction = () => {
                     key={t}
                     type="button"
                     onClick={() => handleTypeChange(t)}
-                    className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
-                      isActive
+                    className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-medium transition-all cursor-pointer ${isActive
                         ? `${meta.bg} ${meta.color} border-current ring-2 ring-offset-1 ring-current/30 shadow-xs font-semibold`
                         : "bg-white text-neutral-600 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
-                    }`}
+                      }`}
                   >
                     <Icon className="w-4 h-4 shrink-0" />
                     <span className="truncate">{meta.label}</span>
@@ -735,11 +776,10 @@ export const Transaction = () => {
 
           {/* 2. Transaction Date & Account(s) */}
           <div
-            className={`grid grid-cols-1 ${
-              typeNeedsSecondAccount(txType)
+            className={`grid grid-cols-1 ${typeNeedsSecondAccount(txType)
                 ? "sm:grid-cols-3"
                 : "sm:grid-cols-2"
-            } gap-4`}
+              } gap-4`}
           >
             <CustomInput
               label="Transaction Date"
@@ -943,6 +983,17 @@ export const Transaction = () => {
         title="Delete Transaction"
         message={`Are you sure you want to permanently delete "${txToDelete?.description}"? This action cannot be undone.`}
         confirmText="Delete"
+      />
+      {/* ── Export Confirmation Modal ── */}
+      <ExportConfirmModal
+        isOpen={isExportModalOpen}
+        filters={filters}
+        accounts={accounts}
+        categories={categories}
+        total={total}
+        isExporting={isExporting}
+        onClose={() => setIsExportModalOpen(false)}
+        onConfirm={handleConfirmExport}
       />
     </div>
   );

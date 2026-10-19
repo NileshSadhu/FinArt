@@ -149,6 +149,37 @@ export const transactionService = {
   deleteTransaction: async (id: string): Promise<void> => {
     await apiConfig.delete(ApiPath.transactions.byId(id));
   },
+
+  exportTransactions: async (filters?: TransactionFilters): Promise<void> => {
+    const params: Record<string, string> = {};
+    if (filters?.type) params.type = filters.type;
+    if (filters?.accountId) params.accountId = filters.accountId;
+    if (filters?.categoryId) params.categoryId = filters.categoryId;
+    if (filters?.fromDate) params.fromDate = filters.fromDate;
+    if (filters?.toDate) params.toDate = filters.toDate;
+
+    const res = await apiConfig.get(ApiPath.transactions.export, {
+      params,
+      responseType: 'blob',
+    });
+
+    // Build a friendly filename from the Content-Disposition header or a fallback
+    const disposition = res.headers['content-disposition'] as string | undefined;
+    let filename = `transactions_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+    if (disposition) {
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      if (match?.[1]) filename = match[1];
+    }
+
+    const url = URL.createObjectURL(new Blob([res.data as BlobPart]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  },
 };
 
 export default transactionService;

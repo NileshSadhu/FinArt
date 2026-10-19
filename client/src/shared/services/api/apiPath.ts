@@ -14,6 +14,7 @@ export const ApiPath = {
     },
     transactions: {
         base: '/transactions',
+        export: '/transactions/export',
         byId: (id: string) => `/transactions/${id}`,
         cancel: (id: string) => `/transactions/${id}/cancel`,
     },
