@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { Download, FileSpreadsheet, Filter, X } from "lucide-react";
+import { Upload, FileSpreadsheet, Filter, X } from "lucide-react";
 import type {
   TransactionFilters,
   TransactionType,
@@ -199,7 +199,7 @@ export const ExportConfirmModal: FC<ExportConfirmModalProps> = ({
               </>
             ) : (
               <>
-                <Download className="w-4 h-4" />
+                <Upload className="w-4 h-4" />
                 Export Excel
               </>
             )}

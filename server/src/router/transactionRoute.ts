@@ -9,12 +9,14 @@ import {
   cancelTransaction,
   deleteTransaction,
   exportTransactions,
+  importTransactions,
 } from "../controllers/transaction.controller.js";
 
 const transactionRoute = Router();
 
 transactionRoute.use(requireAuth, authApiLimiter);
 
+transactionRoute.post("/import", importTransactions);
 transactionRoute.post("/", createTransaction);
 transactionRoute.get("/export", exportTransactions);
 transactionRoute.get("/", getAllTransactions);

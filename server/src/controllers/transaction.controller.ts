@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { Readable } from "node:stream";
 import type { TransactionType } from "../generated/prisma/client.js";
 import ExcelJS from "exceljs";
 import { prisma } from "../db/client.js";
@@ -586,3 +587,398 @@ export const exportTransactions = asyncHandler(
     res.end();
   },
 );
+
+// ── Import Transactions from Excel / CSV ──────────────────────────────────────
+
+export const importTransactions = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = getUserId(res);
+    const { fileBase64, fileName, defaultAccountId } = req.body ?? {};
+
+    if (!fileBase64 || typeof fileBase64 !== "string") {
+      throw new ApiError(400, "File content (base64) is required");
+    }
+
+    if (
+      !defaultAccountId ||
+      typeof defaultAccountId !== "string" ||
+      !isValidUuid(defaultAccountId)
+    ) {
+      throw new ApiError(400, "A valid default account ID is required");
+    }
+
+    // Verify default account belongs to user and is active
+    const userAccounts = await accountRepository.findAllByUser(userId, false);
+    const defaultAccount = userAccounts.find((a) => a.id === defaultAccountId);
+    if (!defaultAccount) {
+      throw new ApiError(
+        400,
+        "Default account not found, inactive, or unauthorized",
+      );
+    }
+
+    // Map user accounts by lowercase name for fast lookup
+    const accountByName = new Map<string, (typeof userAccounts)[number]>();
+    userAccounts.forEach((acc) => {
+      accountByName.set(acc.name.trim().toLowerCase(), acc);
+    });
+
+    // Map user categories by name + type and fallback by name
+    const userCategories = await categoryRepository.findAllForUser(userId);
+    const categoryByKey = new Map<string, (typeof userCategories)[number]>();
+    const categoryByName = new Map<string, (typeof userCategories)[number]>();
+    userCategories.forEach((cat) => {
+      const normName = cat.name.trim().toLowerCase();
+      categoryByKey.set(`${normName}_${cat.type}`, cat);
+      if (!categoryByName.has(normName)) {
+        categoryByName.set(normName, cat);
+      }
+    });
+
+    // Decode base64 buffer
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(fileBase64, "base64");
+    } catch {
+      throw new ApiError(400, "Invalid base64 file data");
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const isCsv =
+      typeof fileName === "string" &&
+      fileName.trim().toLowerCase().endsWith(".csv");
+
+    if (isCsv) {
+      await workbook.csv.read(Readable.from(buffer));
+    } else {
+      await workbook.xlsx.load(buffer as any);
+    }
+
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet || worksheet.rowCount === 0) {
+      throw new ApiError(400, "The uploaded file contains no sheets or data");
+    }
+
+    // Detect header row: look for a row with "date" and ("description" or "amount" or "debit" or "credit")
+    let headerRowNum = -1;
+    const colMap = {
+      date: -1,
+      desc: -1,
+      type: -1,
+      category: -1,
+      account: -1,
+      amount: -1,
+      debit: -1,
+      credit: -1,
+      ref: -1,
+      notes: -1,
+    };
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (headerRowNum !== -1) return;
+      const values: string[] = [];
+      row.eachCell((cell, colNum) => {
+        values[colNum] = String(cell.value ?? "").trim().toLowerCase();
+      });
+
+      const hasDate = values.some((v) => v && v.includes("date"));
+      const hasAmountOrDesc = values.some(
+        (v) =>
+          v &&
+          (v.includes("desc") ||
+            v.includes("amount") ||
+            v.includes("amt") ||
+            v.includes("debit") ||
+            v.includes("credit")),
+      );
+
+      if (hasDate && hasAmountOrDesc) {
+        headerRowNum = rowNumber;
+        values.forEach((v, colNum) => {
+          if (!v) return;
+          if (v.includes("date") && colMap.date === -1) colMap.date = colNum;
+          else if (v.includes("desc") && colMap.desc === -1) colMap.desc = colNum;
+          else if (v.includes("type") && colMap.type === -1) colMap.type = colNum;
+          else if (v.includes("cat") && colMap.category === -1) colMap.category = colNum;
+          else if (v.includes("acc") && colMap.account === -1) colMap.account = colNum;
+          else if (v.includes("debit") && colMap.debit === -1) colMap.debit = colNum;
+          else if (v.includes("credit") && colMap.credit === -1) colMap.credit = colNum;
+          else if ((v.includes("amount") || v.includes("amt")) && colMap.amount === -1) colMap.amount = colNum;
+          else if (v.includes("ref") && colMap.ref === -1) colMap.ref = colNum;
+          else if (v.includes("note") && colMap.notes === -1) colMap.notes = colNum;
+        });
+      }
+    });
+
+    if (headerRowNum === -1) {
+      throw new ApiError(
+        400,
+        "Could not detect table headers. File must contain at least 'Date' and 'Amount' (or 'Description') columns.",
+      );
+    }
+
+    // Helper functions for cell reading
+    function parseDate(val: unknown): Date | null {
+      if (val === null || val === undefined) return null;
+      if (typeof val === "object" && "result" in val) {
+        val = (val as { result: unknown }).result;
+      }
+      if (val instanceof Date && !isNaN(val.getTime())) return val;
+      if (typeof val === "number") {
+        // Excel serial date to JS Date
+        const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+        return isNaN(date.getTime()) ? null : date;
+      }
+      if (typeof val === "string") {
+        const trimmed = val.trim();
+        if (!trimmed) return null;
+        // DD/MM/YYYY or DD-MM-YYYY
+        const dmy = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+        if (dmy && dmy[1] && dmy[2] && dmy[3]) {
+          const d = parseInt(dmy[1], 10);
+          const m = parseInt(dmy[2], 10) - 1;
+          const y = parseInt(dmy[3], 10);
+          const dmyDate = new Date(y, m, d);
+          if (!isNaN(dmyDate.getTime())) return dmyDate;
+        }
+        const parsed = new Date(trimmed);
+        if (!isNaN(parsed.getTime())) return parsed;
+      }
+      return null;
+    }
+
+    function parseAmount(val: unknown): number | null {
+      if (val === null || val === undefined) return null;
+      if (typeof val === "number") return isNaN(val) ? null : val;
+      if (
+        typeof val === "object" &&
+        "result" in (val as Record<string, unknown>)
+      ) {
+        const res = (val as { result: unknown }).result;
+        if (typeof res === "number") return res;
+        val = res;
+      }
+      const str = String(val).trim();
+      const isNegative =
+        str.startsWith("-") || (str.startsWith("(") && str.endsWith(")"));
+      const clean = str.replace(/[^0-9.]/g, "");
+      const n = parseFloat(clean);
+      if (isNaN(n)) return null;
+      return isNegative ? -n : n;
+    }
+
+    function getCellString(cell: ExcelJS.Cell): string {
+      if (typeof cell.text === "string" && cell.text) return cell.text.trim();
+      const val = cell.value;
+      if (val === null || val === undefined) return "";
+      if (typeof val === "object") {
+        const obj = val as unknown as Record<string, unknown>;
+        if ("richText" in obj && Array.isArray(obj.richText)) {
+          return (obj.richText as Array<{ text?: string }>)
+            .map((r) => r.text ?? "")
+            .join("")
+            .trim();
+        }
+        if ("text" in obj && obj.text !== undefined) {
+          return String(obj.text).trim();
+        }
+        if ("result" in obj && obj.result !== undefined) {
+          return String(obj.result).trim();
+        }
+      }
+      return String(val).trim();
+    }
+
+    type ParsedRow = {
+      transactionDate: Date;
+      description: string;
+      type: TransactionType;
+      categoryId: string | null;
+      reference: string | null;
+      notes: string | null;
+      entries: Array<{ accountId: string; amount: number }>;
+    };
+
+    const validRows: ParsedRow[] = [];
+    const skippedReasons: string[] = [];
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber <= headerRowNum) return;
+
+      const dateRaw = colMap.date !== -1 ? row.getCell(colMap.date).value : null;
+      const parsedDate = parseDate(dateRaw);
+      if (!parsedDate) {
+        const hasAnyValue =
+          row.values && Array.isArray(row.values) && row.values.some(Boolean);
+        if (hasAnyValue) {
+          skippedReasons.push(`Row ${rowNumber}: Invalid or missing Date.`);
+        }
+        return;
+      }
+
+      const descStr =
+        colMap.desc !== -1 ? getCellString(row.getCell(colMap.desc)) : "";
+      const description = (descStr || "Imported transaction").slice(0, 225);
+
+      // Amount & Type resolution
+      let type: TransactionType = "EXPENSE";
+      let amount: number | null = null;
+
+      // Handle debit/credit separate columns
+      if (colMap.debit !== -1 || colMap.credit !== -1) {
+        const debitAmt =
+          colMap.debit !== -1
+            ? parseAmount(row.getCell(colMap.debit).value)
+            : null;
+        const creditAmt =
+          colMap.credit !== -1
+            ? parseAmount(row.getCell(colMap.credit).value)
+            : null;
+        if (creditAmt && creditAmt > 0) {
+          type = "INCOME";
+          amount = creditAmt;
+        } else if (debitAmt && debitAmt > 0) {
+          type = "EXPENSE";
+          amount = debitAmt;
+        }
+      }
+
+      if (amount === null && colMap.amount !== -1) {
+        const rawAmt = parseAmount(row.getCell(colMap.amount).value);
+        if (rawAmt !== null && rawAmt !== 0) {
+          amount = Math.abs(rawAmt);
+          if (rawAmt < 0) type = "EXPENSE";
+        }
+      }
+
+      // Check explicit type column
+      if (colMap.type !== -1) {
+        const typeStr = getCellString(row.getCell(colMap.type)).toUpperCase();
+        if ((TRANSACTION_TYPES as readonly string[]).includes(typeStr)) {
+          type = typeStr as TransactionType;
+        }
+      }
+
+      if (amount === null || amount === 0) {
+        skippedReasons.push(`Row ${rowNumber}: Missing or zero amount.`);
+        return;
+      }
+
+      // Account resolution
+      let resolvedAccountId = defaultAccountId;
+      if (colMap.account !== -1) {
+        const accName = getCellString(row.getCell(colMap.account)).toLowerCase();
+        if (accName) {
+          const matched = accountByName.get(accName);
+          if (matched) {
+            resolvedAccountId = matched.id;
+          }
+        }
+      }
+
+      // Category resolution
+      let resolvedCategoryId: string | null = null;
+      if (colMap.category !== -1) {
+        const catName = getCellString(row.getCell(colMap.category)).toLowerCase();
+        if (catName) {
+          const matched =
+            categoryByKey.get(`${catName}_${type}`) ??
+            categoryByName.get(catName);
+          if (matched) {
+            resolvedCategoryId = matched.id;
+          }
+        }
+      }
+
+      const refStr =
+        colMap.ref !== -1 ? getCellString(row.getCell(colMap.ref)) : "";
+      const notesStr =
+        colMap.notes !== -1 ? getCellString(row.getCell(colMap.notes)) : "";
+
+      // Construct entries according to domain constraints
+      let entries: Array<{ accountId: string; amount: number }> = [];
+      if (type === "INCOME") {
+        entries = [{ accountId: resolvedAccountId, amount: Math.abs(amount) }];
+      } else if (type === "EXPENSE") {
+        entries = [{ accountId: resolvedAccountId, amount: -Math.abs(amount) }];
+      } else if (type === "ADJUSTMENT") {
+        entries = [{ accountId: resolvedAccountId, amount }];
+      } else if (type === "TRANSFER") {
+        const rawAccounts = colMap.account !== -1 ? getCellString(row.getCell(colMap.account)) : "";
+        const parts = rawAccounts.split(/[,>]/).map((p) => p.trim().toLowerCase());
+        const acc1 = accountByName.get(parts[0] ?? "");
+        const acc2 = accountByName.get(parts[1] ?? "");
+        if (acc1 && acc2 && acc1.id !== acc2.id) {
+          entries = [
+            { accountId: acc1.id, amount: -Math.abs(amount) },
+            { accountId: acc2.id, amount: Math.abs(amount) },
+          ];
+        } else {
+          // If only one account could be resolved, fallback to EXPENSE
+          entries = [{ accountId: resolvedAccountId, amount: -Math.abs(amount) }];
+          type = "EXPENSE";
+        }
+      } else {
+        // Fallback for lend/repayment when single account is provided
+        entries = [{ accountId: resolvedAccountId, amount: -Math.abs(amount) }];
+        type = "EXPENSE";
+      }
+
+      validRows.push({
+        transactionDate: parsedDate,
+        description,
+        type,
+        categoryId: resolvedCategoryId,
+        reference: refStr ? refStr.slice(0, 225) : null,
+        notes: notesStr ? notesStr.slice(0, 225) : null,
+        entries,
+      });
+    });
+
+    if (validRows.length === 0) {
+      throw new ApiError(
+        400,
+        `No valid transactions found in file. ${skippedReasons.slice(0, 3).join(" ")}`,
+      );
+    }
+
+    // Atomically persist transactions in DB with timeout protection
+    const importedCount = await prisma.$transaction(
+      async (tx) => {
+        let count = 0;
+        for (const item of validRows) {
+          await tx.transaction.create({
+            data: {
+              userId,
+              transactionDate: item.transactionDate,
+              description: item.description,
+              type: item.type,
+              categoryId: item.categoryId,
+              reference: item.reference,
+              notes: item.notes,
+              entries: {
+                create: item.entries,
+              },
+            },
+          });
+          count++;
+        }
+        return count;
+      },
+      { timeout: 60000, maxWait: 10000 },
+    );
+
+    return res.status(201).json(
+      new ApiResponse(
+        201,
+        {
+          importedCount,
+          skippedCount: skippedReasons.length,
+          errors: skippedReasons.slice(0, 10),
+        },
+        `Successfully imported ${importedCount} transaction${importedCount === 1 ? "" : "s"}`,
+      ),
+    );
+  },
+);
+

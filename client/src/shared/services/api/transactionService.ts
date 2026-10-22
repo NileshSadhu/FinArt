@@ -180,6 +180,48 @@ export const transactionService = {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   },
+
+  importTransactions: async (
+    fileBase64: string,
+    fileName: string,
+    defaultAccountId: string,
+  ): Promise<{
+    importedCount: number;
+    skippedCount: number;
+    errors: string[];
+  }> => {
+    const res = await apiConfig.post<{
+      data: {
+        importedCount: number;
+        skippedCount: number;
+        errors: string[];
+      };
+    }>(ApiPath.transactions.import, {
+      fileBase64,
+      fileName,
+      defaultAccountId,
+    });
+    return res.data.data;
+  },
+
+  downloadSampleCsv: (): void => {
+    const today = new Date().toISOString().split('T')[0];
+    const csvContent =
+      'Date,Description,Type,Category,Account,Amount,Reference,Notes\n' +
+      `${today},Grocery Shopping,EXPENSE,Food,,1250.00,REF-001,Weekly groceries\n` +
+      `${today},Monthly Salary,INCOME,Salary,,45000.00,SAL-001,Direct deposit\n` +
+      `${today},Electricity Bill,EXPENSE,Utilities,,1800.00,BILL-001,Monthly power bill\n`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'finart_transactions_template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  },
 };
 
 export default transactionService;

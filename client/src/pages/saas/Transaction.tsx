@@ -9,6 +9,7 @@ import {
   TrendingUp,
   TrendingDown,
   Download,
+  Upload,
 } from "lucide-react";
 import PageHeader from "../../shared/components/saas/PageHeader";
 import CustomInput, {
@@ -20,6 +21,7 @@ import Table, { type TableColumn } from "../../shared/components/saas/Table";
 import Pagination from "../../shared/components/saas/Pagination";
 import Modal from "../../shared/components/saas/Modal";
 import ExportConfirmModal from "../../shared/components/saas/ExportConfirmModal";
+import ImportModal from "../../shared/components/saas/ImportModal";
 import transactionService, {
   TRANSACTION_TYPES,
   type Transaction as TxItem,
@@ -101,6 +103,9 @@ export const Transaction = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
+  // ── Import
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
   // ── Filter panel
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterType, setFilterType] = useState("");
@@ -127,7 +132,7 @@ export const Transaction = () => {
         setIsLoading(false);
       }
     },
-    [page, limit, filters],
+    [limit],
   );
 
   // ── Fetch reference data (accounts + categories) once on mount
@@ -155,9 +160,10 @@ export const Transaction = () => {
   useEffect(() => {
     fetchReferenceData();
   }, [fetchReferenceData]);
+
   useEffect(() => {
-    fetchTransactions(page);
-  }, [fetchTransactions, page]);
+    fetchTransactions(page, filters);
+  }, [fetchTransactions, page, filters]);
 
   // ── Reset form to defaults
   const resetForm = () => {
@@ -357,16 +363,14 @@ export const Transaction = () => {
 
   // ── Filter handlers
   const handleApplyFilters = () => {
-    const newFilters: TransactionFilters = {
+    setFilters({
       type: filterType ? (filterType as TransactionType) : undefined,
       accountId: filterAccountId || undefined,
       categoryId: filterCategoryId || undefined,
       fromDate: filterFromDate || undefined,
       toDate: filterToDate || undefined,
-    };
-    setFilters(newFilters);
+    });
     setPage(1);
-    fetchTransactions(1, newFilters);
     setIsFilterOpen(false);
   };
 
@@ -378,17 +382,17 @@ export const Transaction = () => {
     setFilterToDate("");
     setFilters({});
     setPage(1);
-    fetchTransactions(1, {});
     setIsFilterOpen(false);
   };
 
-  const hasActiveFilters = Boolean(
-    filters.type ||
-    filters.accountId ||
-    filters.categoryId ||
-    filters.fromDate ||
+  const activeFilterCount = [
+    filters.type,
+    filters.accountId,
+    filters.categoryId,
+    filters.fromDate,
     filters.toDate,
-  );
+  ].filter(Boolean).length;
+  const hasActiveFilters = activeFilterCount > 0;
 
   // ── Open export confirmation modal (or warn if nothing to export)
   const handleExport = () => {
@@ -414,6 +418,25 @@ export const Transaction = () => {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  // ── Import Success Callback
+  const handleImportSuccess = (result: {
+    importedCount: number;
+    skippedCount: number;
+    errors: string[];
+  }) => {
+    toast.success(
+      `Successfully imported ${result.importedCount} transaction${result.importedCount === 1 ? "" : "s"}!`,
+    );
+    if (result.skippedCount > 0) {
+      toast(
+        `${result.skippedCount} row${result.skippedCount === 1 ? "" : "s"} skipped due to missing or invalid fields.`,
+        { icon: "ℹ️" },
+      );
+    }
+    fetchTransactions(1);
+    fetchReferenceData();
   };
 
   // ── Derived data for selects
@@ -568,6 +591,15 @@ export const Transaction = () => {
               variant="secondary"
               size="md"
               leftIcon={<Download className="w-4 h-4" />}
+              onClick={() => setIsImportModalOpen(true)}
+              disabled={refLoading}
+            >
+              Import
+            </CustomBtn>
+            <CustomBtn
+              variant="secondary"
+              size="md"
+              leftIcon={<Upload className="w-4 h-4" />}
               onClick={handleExport}
               isLoading={isExporting}
               disabled={isExporting}
@@ -601,13 +633,7 @@ export const Transaction = () => {
           Filters
           {hasActiveFilters && (
             <span className="ml-0.5 px-1.5 py-0.5 rounded-full text-xs font-semibold bg-white text-black leading-none">
-              {[
-                filters.type,
-                filters.accountId,
-                filters.categoryId,
-                filters.fromDate,
-                filters.toDate,
-              ].filter(Boolean).length}
+              {activeFilterCount}
             </span>
           )}
         </button>
@@ -835,23 +861,31 @@ export const Transaction = () => {
           </div>
 
           {/* 3. Amount & Category (if applicable) */}
-          {typeNeedsCategory(txType) ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <CustomInput
-                label={
-                  txType === "EXPENSE"
-                    ? "Amount (will be deducted)"
-                    : "Amount received"
-                }
-                type="text"
-                inputMode="decimal"
-                placeholder="0.00"
-                value={amount}
-                onChange={handleAmountChange}
-                error={amountError}
-                required
-              />
+          <div
+            className={`grid grid-cols-1 ${
+              typeNeedsCategory(txType) ? "sm:grid-cols-2" : ""
+            } gap-4`}
+          >
+            <CustomInput
+              label={
+                txType === "EXPENSE"
+                  ? "Amount (will be deducted)"
+                  : txType === "INCOME"
+                    ? "Amount received"
+                    : txType === "ADJUSTMENT"
+                      ? "Amount (use − for decrease, + for increase)"
+                      : "Transfer Amount"
+              }
+              type="text"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={amount}
+              onChange={handleAmountChange}
+              error={amountError}
+              required
+            />
 
+            {typeNeedsCategory(txType) && (
               <CustomSelect
                 label="Category (optional)"
                 value={categoryId}
@@ -864,23 +898,8 @@ export const Transaction = () => {
                   </option>
                 ))}
               </CustomSelect>
-            </div>
-          ) : (
-            <CustomInput
-              label={
-                txType === "ADJUSTMENT"
-                  ? "Amount (use − for decrease, + for increase)"
-                  : "Transfer Amount"
-              }
-              type="text"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={amount}
-              onChange={handleAmountChange}
-              error={amountError}
-              required
-            />
-          )}
+            )}
+          </div>
 
           {/* 4. Description */}
           <CustomInput
@@ -889,13 +908,8 @@ export const Transaction = () => {
             maxLength={MAX_TEXT_LENGTH}
             value={description}
             onChange={(e) => {
-              const val = e.target.value;
-              setDescription(val);
-              if (val.length >= MAX_TEXT_LENGTH) {
-                setDescError("Character limit reached");
-              } else if (descError) {
-                setDescError("");
-              }
+              setDescription(e.target.value);
+              if (descError) setDescError("");
             }}
             error={descError}
             required
@@ -909,13 +923,8 @@ export const Transaction = () => {
               maxLength={MAX_TEXT_LENGTH}
               value={reference}
               onChange={(e) => {
-                const val = e.target.value;
-                setReference(val);
-                if (val.length >= MAX_TEXT_LENGTH) {
-                  setRefError("Character limit reached");
-                } else if (refError) {
-                  setRefError("");
-                }
+                setReference(e.target.value);
+                if (refError) setRefError("");
               }}
               error={refError}
             />
@@ -925,13 +934,8 @@ export const Transaction = () => {
               maxLength={MAX_TEXT_LENGTH}
               value={notes}
               onChange={(e) => {
-                const val = e.target.value;
-                setNotes(val);
-                if (val.length >= MAX_TEXT_LENGTH) {
-                  setNotesError("Character limit reached");
-                } else if (notesError) {
-                  setNotesError("");
-                }
+                setNotes(e.target.value);
+                if (notesError) setNotesError("");
               }}
               error={notesError}
             />
@@ -994,6 +998,13 @@ export const Transaction = () => {
         isExporting={isExporting}
         onClose={() => setIsExportModalOpen(false)}
         onConfirm={handleConfirmExport}
+      />
+      {/* ── Import Modal ── */}
+      <ImportModal
+        isOpen={isImportModalOpen}
+        accounts={accounts}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={handleImportSuccess}
       />
     </div>
   );
