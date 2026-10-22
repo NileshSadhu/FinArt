@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   X,
+  Tag,
 } from 'lucide-react';
 import { useAuth } from '../../services/auth/useAuth';
 import { Modal } from './Modal';
@@ -23,6 +24,7 @@ const navItems: NavItem[] = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'Transactions', path: '/transactions', icon: ArrowLeftRight },
   { name: 'Accounts', path: '/accounts', icon: CreditCard },
+  { name: 'Categories', path: '/categories', icon: Tag },
   { name: 'Analytics', path: '/analytics', icon: TrendingUp },
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
