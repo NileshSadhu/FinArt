@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, type FormEvent } from "react";
 import toast from "react-hot-toast";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import PageHeader from "../../shared/components/saas/PageHeader";
 import CustomInput, { CustomSelect } from "../../shared/components/CustomInput";
 import CustomBtn from "../../shared/components/CustomBtn";
@@ -34,6 +34,7 @@ export const Account = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [nameError, setNameError] = useState("");
   const [balanceError, setBalanceError] = useState("");
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   // Edit & Delete State
   const [editingAccount, setEditingAccount] = useState<AccountItem | null>(
@@ -86,7 +87,7 @@ export const Account = () => {
         : "",
     );
     setBalanceError("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setIsAccountModalOpen(true);
   };
 
   // Clear all input fields and reset form
@@ -101,8 +102,14 @@ export const Account = () => {
 
   // Cancel edit mode and reset form
   const handleCancelEdit = () => {
+    setIsAccountModalOpen(false);
     setEditingAccount(null);
     handleClear();
+  };
+
+  const openCreateModal = () => {
+    handleCancelEdit();
+    setIsAccountModalOpen(true);
   };
 
   // Handle Create or Update Submission
@@ -140,7 +147,7 @@ export const Account = () => {
         });
 
         toast.success("Account created successfully");
-        handleClear();
+        handleCancelEdit();
 
         await fetchAccounts(1);
         setPage(1);
@@ -273,16 +280,57 @@ export const Account = () => {
       <PageHeader
         title="Accounts"
         subtitle="Create and manage your bank, cash, and financial accounts."
+        btn={
+          <CustomBtn
+            variant="primary"
+            size="md"
+            leftIcon={<Plus className="w-4 h-4" />}
+            onClick={openCreateModal}
+          >
+            Add Account
+          </CustomBtn>
+        }
       />
 
-      {/* Create / Update Account Card */}
-      <div className="bg-white rounded-2xl border border-neutral-200 p-5 sm:p-6 shadow-xs">
-        <h2 className="text-base font-bold text-neutral-900 mb-4">
-          {editingAccount ? "Update Account" : "Create New Account"}
-        </h2>
+      {/* Accounts Table Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold tracking-tight text-neutral-900">
+            Your Accounts
+          </h2>
+          <span className="text-xs font-medium text-neutral-500">
+            {total} {total === 1 ? "account" : "accounts"} total
+          </span>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Table
+          columns={columns}
+          data={accounts}
+          isLoading={isLoading}
+          emptyMessage="No accounts found. Click 'Add Account' to create your first account."
+        />
+
+        {total > limit && (
+          <Pagination
+            currentPage={page}
+            total={total}
+            limit={limit}
+            currentCount={accounts.length}
+            onPageChange={setPage}
+          />
+        )}
+      </div>
+
+      {/* Create / Update Account Modal */}
+      <Modal
+        isOpen={isAccountModalOpen}
+        onClose={handleCancelEdit}
+        title={editingAccount ? "Update Account" : "Create Account"}
+        titleVariant="header"
+        className="max-w-2xl w-full"
+      >
+        <form noValidate onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Account Name */}
             <CustomInput
               label="Account Name"
@@ -311,7 +359,6 @@ export const Account = () => {
               options={ACCOUNT_TYPES}
             />
 
-            {/* Currency Dropdown */}
             <CustomSelect
               label="Currency"
               value={currency}
@@ -365,28 +412,16 @@ export const Account = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2.5 pt-2">
-            {editingAccount ? (
-              <CustomBtn
-                type="button"
-                variant="secondary"
-                size="md"
-                onClick={handleCancelEdit}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </CustomBtn>
-            ) : (
-              <CustomBtn
-                type="button"
-                variant="secondary"
-                size="md"
-                onClick={handleClear}
-                disabled={isSubmitting}
-              >
-                Clear
-              </CustomBtn>
-            )}
+          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-neutral-100">
+            <CustomBtn
+              type="button"
+              variant="secondary"
+              size="md"
+              onClick={handleCancelEdit}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </CustomBtn>
             <CustomBtn
               type="submit"
               variant="primary"
@@ -398,36 +433,7 @@ export const Account = () => {
             </CustomBtn>
           </div>
         </form>
-      </div>
-
-      {/* Accounts Table Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold tracking-tight text-neutral-900">
-            Your Accounts
-          </h2>
-          <span className="text-xs font-medium text-neutral-500">
-            {total} {total === 1 ? "account" : "accounts"} total
-          </span>
-        </div>
-
-        <Table
-          columns={columns}
-          data={accounts}
-          isLoading={isLoading}
-          emptyMessage="No accounts found. Create your first account above to get started."
-        />
-
-        {total > limit && (
-          <Pagination
-            currentPage={page}
-            total={total}
-            limit={limit}
-            currentCount={accounts.length}
-            onPageChange={setPage}
-          />
-        )}
-      </div>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal

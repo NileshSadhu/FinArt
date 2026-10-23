@@ -1,18 +1,18 @@
 import { useState, useEffect, useCallback, type FormEvent } from "react";
 import toast from "react-hot-toast";
 import {
-  Tag,
   Pencil,
   Trash2,
   Lock,
   Plus,
+  Minus,
   TrendingDown,
   TrendingUp,
-  X,
 } from "lucide-react";
 import PageHeader from "../../shared/components/saas/PageHeader";
 import CustomInput, {
   CustomSelect,
+  FieldLabel,
 } from "../../shared/components/CustomInput";
 import CustomBtn from "../../shared/components/CustomBtn";
 import Table, { type TableColumn } from "../../shared/components/saas/Table";
@@ -21,9 +21,24 @@ import categoryService, {
   type Category as CategoryItem,
   type CategoryType,
 } from "../../shared/services/api/categoryService";
+import {
+  CATEGORY_ICON_OPTIONS,
+  getCategoryIconOption,
+} from "../../shared/utils/categoryIcons";
 import { getApiErrorMessage } from "../../shared/utils/validation";
 
 const CATEGORY_TYPES: CategoryType[] = ["EXPENSE", "INCOME"];
+const CATEGORY_ICON_PICKER_OPTIONS = [
+  {
+    name: null,
+    label: "None",
+    Icon: Minus,
+    color: "text-neutral-600",
+    selectedColor:
+      "border-black bg-neutral-100 text-neutral-900 ring-black/10",
+  },
+  ...CATEGORY_ICON_OPTIONS,
+];
 
 export const Category = () => {
   // List & Filter State
@@ -34,8 +49,10 @@ export const Category = () => {
   // Form State
   const [name, setName] = useState("");
   const [type, setType] = useState<CategoryType>("EXPENSE");
+  const [icon, setIcon] = useState<string | null>(null);
   const [nameError, setNameError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(
     null,
   );
@@ -71,16 +88,24 @@ export const Category = () => {
     setEditingCategory(cat);
     setName(cat.name);
     setType(cat.type);
+    setIcon(cat.icon);
     setNameError("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setIsCategoryModalOpen(true);
   };
 
   // Cancel edit mode and reset form
   const handleCancelEdit = () => {
+    setIsCategoryModalOpen(false);
     setEditingCategory(null);
     setName("");
     setType("EXPENSE");
+    setIcon(null);
     setNameError("");
+  };
+
+  const openCreateModal = () => {
+    handleCancelEdit();
+    setIsCategoryModalOpen(true);
   };
 
   // Handle Form Submit (Create or Update)
@@ -101,22 +126,18 @@ export const Category = () => {
     setIsSubmitting(true);
 
     try {
+      const payload = { name: trimmedName, type, icon };
       if (editingCategory) {
-        await categoryService.updateCategory(editingCategory.id, {
-          name: trimmedName,
-          type,
-        });
-        toast.success("Category updated successfully");
-        handleCancelEdit();
+        await categoryService.updateCategory(editingCategory.id, payload);
       } else {
-        await categoryService.createCategory({
-          name: trimmedName,
-          type,
-        });
-        toast.success("Category created successfully");
-        setName("");
-        setType("EXPENSE");
+        await categoryService.createCategory(payload);
       }
+      toast.success(
+        editingCategory
+          ? "Category updated successfully"
+          : "Category created successfully",
+      );
+      handleCancelEdit();
       await fetchCategories();
     } catch (err: unknown) {
       toast.error(
@@ -169,24 +190,30 @@ export const Category = () => {
     {
       header: "Category Name",
       accessor: "name",
-      render: (cat) => (
-        <div className="flex items-center gap-2.5">
-          <div
-            className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-              cat.type === "EXPENSE"
-                ? "bg-red-50 text-red-600"
-                : "bg-emerald-50 text-emerald-600"
-            }`}
-          >
-            <Tag className="w-4 h-4" />
+      render: (cat) => {
+        const iconOption = getCategoryIconOption(cat.icon);
+        const CategoryIcon = iconOption?.Icon;
+        return (
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                iconOption
+                  ? `${iconOption.color} bg-neutral-50`
+                  : cat.type === "EXPENSE"
+                    ? "bg-red-50 text-red-600"
+                    : "bg-emerald-50 text-emerald-600"
+              }`}
+            >
+              {CategoryIcon && <CategoryIcon className="w-4 h-4" />}
+            </div>
+            <div>
+              <p className="font-semibold text-neutral-900 leading-tight">
+                {cat.name}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-semibold text-neutral-900 leading-tight">
-              {cat.name}
-            </p>
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       header: "Type",
@@ -291,92 +318,17 @@ export const Category = () => {
       <PageHeader
         title="Categories"
         subtitle="Organize your expenses and income with custom and system categories."
+        btn={
+          <CustomBtn
+            variant="primary"
+            size="md"
+            leftIcon={<Plus className="w-4 h-4" />}
+            onClick={openCreateModal}
+          >
+            Create Category
+          </CustomBtn>
+        }
       />
-
-      {/* Create / Update Category Card */}
-      <div className="bg-white rounded-2xl border border-neutral-200 p-5 sm:p-6 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center">
-              {editingCategory ? (
-                <Pencil className="w-4 h-4" />
-              ) : (
-                <Plus className="w-4 h-4" />
-              )}
-            </div>
-            <h2 className="text-base font-bold text-neutral-900">
-              {editingCategory ? "Update Category" : "Create New Category"}
-            </h2>
-          </div>
-          {editingCategory && (
-            <button
-              type="button"
-              onClick={handleCancelEdit}
-              className="inline-flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-900 cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" />
-              Cancel Edit
-            </button>
-          )}
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Category Name */}
-            <CustomInput
-              label="Category Name"
-              placeholder="e.g. Groceries, Freelance, Health"
-              maxLength={100}
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (nameError) setNameError("");
-              }}
-              error={nameError}
-              required
-            />
-
-            {/* Category Type */}
-            <CustomSelect
-              label="Category Type"
-              value={type}
-              onChange={(e) => setType(e.target.value as CategoryType)}
-              options={CATEGORY_TYPES}
-            />
-
-            {/* Actions */}
-            <div className="flex items-end gap-2.5">
-              <CustomBtn
-                type="submit"
-                variant="primary"
-                size="md"
-                isLoading={isSubmitting}
-                className="flex-1"
-                leftIcon={
-                  editingCategory ? (
-                    <Pencil className="w-4 h-4" />
-                  ) : (
-                    <Plus className="w-4 h-4" />
-                  )
-                }
-              >
-                {editingCategory ? "Save Changes" : "Create Category"}
-              </CustomBtn>
-
-              {editingCategory && (
-                <CustomBtn
-                  type="button"
-                  variant="secondary"
-                  size="md"
-                  onClick={handleCancelEdit}
-                >
-                  Cancel
-                </CustomBtn>
-              )}
-            </div>
-          </div>
-        </form>
-      </div>
 
       {/* Filter Tabs & Stats Bar */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -427,9 +379,89 @@ export const Category = () => {
           columns={columns}
           data={filteredCategories}
           isLoading={isLoading}
-          emptyMessage="No categories found. Create a new category above."
+          emptyMessage="No categories found. Click 'Create Category' to add one."
         />
       </div>
+
+      {/* Create / Update Category Modal */}
+      <Modal
+        isOpen={isCategoryModalOpen}
+        onClose={handleCancelEdit}
+        title={editingCategory ? "Update Category" : "Create Category"}
+        titleVariant="header"
+        className="max-w-lg w-full"
+      >
+        <form noValidate onSubmit={handleSubmit} className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <CustomInput
+              label="Category Name"
+              placeholder="e.g. Groceries, Freelance, Health"
+              maxLength={100}
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (nameError) setNameError("");
+              }}
+              error={nameError}
+              required
+            />
+
+            <CustomSelect
+              label="Category Type"
+              value={type}
+              onChange={(e) => setType(e.target.value as CategoryType)}
+              options={CATEGORY_TYPES}
+            />
+          </div>
+
+          <div>
+            <FieldLabel label="Category Icon" className="mb-1.5 block" />
+            <div className="grid grid-cols-5 sm:grid-cols-6 gap-1.5">
+              {CATEGORY_ICON_PICKER_OPTIONS.map(
+                ({ name: iconName, label, Icon, color, selectedColor }) => (
+                  <button
+                    key={iconName ?? "none"}
+                    type="button"
+                    onClick={() => setIcon(iconName)}
+                    aria-label={iconName ? label : "No icon"}
+                    title={label}
+                    aria-pressed={icon === iconName}
+                    className={`flex flex-col items-center justify-center gap-0.5 h-12 rounded-lg border text-[10px] transition-colors cursor-pointer ${
+                      icon === iconName
+                        ? `${selectedColor} ring-2`
+                        : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${color}`} />
+                    <span className="truncate max-w-full px-0.5">{label}</span>
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-neutral-100">
+            <CustomBtn
+              type="button"
+              variant="secondary"
+              size="md"
+              onClick={handleCancelEdit}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </CustomBtn>
+            <CustomBtn
+              type="submit"
+              variant="primary"
+              size="md"
+              isLoading={isSubmitting}
+              className="px-6"
+            >
+              {editingCategory ? "Save Changes" : "Create Category"}
+            </CustomBtn>
+          </div>
+        </form>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal

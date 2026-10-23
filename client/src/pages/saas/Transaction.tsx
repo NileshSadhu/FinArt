@@ -53,6 +53,7 @@ import {
   getTransactionDisplayAmount,
   isCancelledTransaction,
 } from "../../shared/utils/transaction";
+import { getCategoryIconOption } from "../../shared/utils/categoryIcons";
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
@@ -495,14 +496,23 @@ export const Transaction = () => {
     {
       header: "Category",
       accessor: "category",
-      render: (tx) =>
-        tx.category ? (
-          <span className="text-xs text-neutral-600 font-medium">
+      render: (tx) => {
+        if (!tx.category) {
+          return <span className="text-xs text-neutral-300">—</span>;
+        }
+        const iconOption = getCategoryIconOption(tx.category.icon);
+        const CategoryIcon = iconOption?.Icon;
+        return (
+          <span className="inline-flex items-center gap-1.5 text-xs text-neutral-600 font-medium">
+            {CategoryIcon && (
+              <CategoryIcon
+                className={`w-3.5 h-3.5 shrink-0 ${iconOption.color}`}
+              />
+            )}
             {tx.category.name}
           </span>
-        ) : (
-          <span className="text-xs text-neutral-300">—</span>
-        ),
+        );
+      },
     },
     {
       header: "Accounts",
@@ -767,6 +777,7 @@ export const Transaction = () => {
         isOpen={isAddModalOpen}
         onClose={closeAddModal}
         title="Add Transaction"
+        titleVariant="header"
         className="max-w-3xl w-full"
       >
         <form noValidate onSubmit={handleSubmit} className="space-y-5 mt-1">

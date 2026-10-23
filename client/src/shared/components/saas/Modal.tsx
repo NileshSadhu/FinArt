@@ -16,6 +16,7 @@ export interface ModalProps {
   isLoading?: boolean;
   children?: ReactNode;
   className?: string;
+  titleVariant?: 'default' | 'header';
 }
 
 const typeConfig: Record<
@@ -51,6 +52,7 @@ export const Modal: FC<ModalProps> = ({
   isLoading = false,
   children,
   className = '',
+  titleVariant = 'default',
 }) => {
   useEffect(() => {
     if (!isOpen) return;
@@ -65,16 +67,20 @@ export const Modal: FC<ModalProps> = ({
 
   const config = type !== 'default' ? typeConfig[type] : null;
   const Icon = config?.icon;
+  const titleVariantClass =
+    titleVariant === 'header'
+      ? '-mx-6 -mt-6 rounded-t-2xl bg-neutral-100 px-6 py-3'
+      : '';
 
   const hasCustomMaxWidth = className && /\bmax-w-/.test(className);
 
   return createPortal(
     <div
       onClick={(e) => e.target === e.currentTarget && onClose()}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 bg-black/40 backdrop-blur-xs"
     >
       <div
-        className={`relative w-full ${hasCustomMaxWidth ? '' : 'max-w-sm'} rounded-2xl bg-white p-6 shadow-xl border border-neutral-100 ${className}`}
+        className={`relative w-full max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain ${hasCustomMaxWidth ? '' : 'max-w-sm'} rounded-2xl bg-white p-6 shadow-xl border border-neutral-100 ${className}`}
       >
         <button
           type="button"
@@ -93,7 +99,9 @@ export const Modal: FC<ModalProps> = ({
         )}
 
         {title && (
-          <h3 className={`text-base font-semibold text-neutral-900 ${config ? 'text-center' : ''}`}>
+          <h3
+            className={`text-base font-semibold text-neutral-900 ${config ? 'text-center' : ''} ${titleVariantClass}`}
+          >
             {title}
           </h3>
         )}

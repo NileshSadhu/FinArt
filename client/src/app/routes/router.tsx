@@ -6,12 +6,12 @@ import ContactPage from "../../pages/web/Contactpage";
 import NotFoundPage from "../../pages/NotFoundPage";
 import SignInPage from "../../pages/auth/SignInPage";
 import AuthCallbackPage from "../../pages/auth/AuthCallbackPage";
-import DashboardPage from "../../pages/DashboardPage";
 import Account from "../../pages/saas/Account";
 import Transaction from "../../pages/saas/Transaction";
 import Category from "../../pages/saas/Category";
 import FinArtLayout from "../layouts/FinArtLayout";
 import { PublicOnlyRoute, ProtectedRoute } from "./routeGuards";
+import DashboardRoute from "./DashboardRoute";
 
 export const router = createBrowserRouter([
     // Web Layout (Navbar and Footer always present, inside content changes dynamically)
@@ -68,7 +68,7 @@ export const router = createBrowserRouter([
                 path: "/dashboard",
                 element: (
                     <ProtectedRoute>
-                        <DashboardPage />
+                        <DashboardRoute />
                     </ProtectedRoute>
                 )
             },
