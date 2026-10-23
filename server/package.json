@@ -21,7 +21,9 @@
     "test": "tsx --test src/tests/**/*.test.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "seed:categories": "tsx prisma/CategorySeed.ts",
+    "seed:transactions": "tsx prisma/transcationSeed.ts"
   },
   "dependencies": {
     "@prisma/client": "7.10.0",
