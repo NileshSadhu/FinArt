@@ -5,6 +5,10 @@ import PageHeader from "../../shared/components/saas/PageHeader";
 import CustomInput, { CustomSelect } from "../../shared/components/CustomInput";
 import CustomBtn from "../../shared/components/CustomBtn";
 import Table, { type TableColumn } from "../../shared/components/saas/Table";
+import CurrencyLogo from "../../shared/components/saas/CurrencyLogo";
+import AccountCard, {
+  AccountCardSkeleton,
+} from "../../shared/components/saas/AccountCard";
 import Pagination from "../../shared/components/saas/Pagination";
 import Modal from "../../shared/components/saas/Modal";
 import accountService, {
@@ -20,6 +24,7 @@ import {
   formatNumberWithCommas,
   parseFormattedNumber,
   formatCurrency,
+  formatDate,
   getApiErrorMessage,
   ACCOUNT_NAME_MAX_LENGTH,
   MAX_ACCOUNT_BALANCE,
@@ -51,6 +56,7 @@ export const Account = () => {
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
   // Fetch Accounts from API
   const fetchAccounts = useCallback(
@@ -203,9 +209,13 @@ export const Account = () => {
     {
       header: "Currency",
       accessor: "currency",
+      align: "center",
       render: (acc) => (
-        <span className="text-xs font-semibold text-neutral-500 uppercase">
-          {acc.currency}
+        <span
+          className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-neutral-100 text-neutral-800 border border-neutral-200/80 shadow-2xs"
+          title={acc.currency}
+        >
+          <CurrencyLogo currency={acc.currency} className="w-3.5 h-3.5" />
         </span>
       ),
     },
@@ -238,11 +248,7 @@ export const Account = () => {
       align: "right",
       render: (acc) => (
         <span className="text-xs text-neutral-500 tabular-nums">
-          {new Date(acc.createdAt).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })}
+          {formatDate(acc.createdAt)}
         </span>
       ),
     },
@@ -303,12 +309,42 @@ export const Account = () => {
           </span>
         </div>
 
-        <Table
-          columns={columns}
-          data={accounts}
-          isLoading={isLoading}
-          emptyMessage="No accounts found. Click 'Add Account' to create your first account."
-        />
+        {/* Desktop Excel-like Table View (Hidden on mobile) */}
+        <div className="hidden md:block">
+          <Table
+            columns={columns}
+            data={accounts}
+            isLoading={isLoading}
+            emptyMessage="No accounts found. Click 'Add Account' to create your first account."
+          />
+        </div>
+
+        {/* Mobile Horizontal Cards View (Hidden on desktop) */}
+        <div className="md:hidden space-y-3">
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, idx) => (
+              <AccountCardSkeleton key={`account-skeleton-${idx}`} />
+            ))
+          ) : accounts.length === 0 ? (
+            <div className="rounded-2xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500 shadow-xs select-none">
+              No accounts found. Click &apos;Add Account&apos; to create your first account.
+            </div>
+          ) : (
+            accounts.map((acc, idx) => (
+              <AccountCard
+                key={acc.id}
+                account={acc}
+                index={(page - 1) * limit + idx}
+                isOpen={activeCardId === acc.id}
+                onToggle={() =>
+                  setActiveCardId((prev) => (prev === acc.id ? null : acc.id))
+                }
+                onEdit={handleStartEdit}
+                onDelete={setAccountToDelete}
+              />
+            ))
+          )}
+        </div>
 
         {total > limit && (
           <Pagination

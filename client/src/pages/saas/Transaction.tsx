@@ -18,6 +18,9 @@ import CustomInput, {
 } from "../../shared/components/CustomInput";
 import CustomBtn from "../../shared/components/CustomBtn";
 import Table, { type TableColumn } from "../../shared/components/saas/Table";
+import TransactionCard, {
+  TransactionCardSkeleton,
+} from "../../shared/components/saas/TransactionCard";
 import Pagination from "../../shared/components/saas/Pagination";
 import Modal from "../../shared/components/saas/Modal";
 import ExportConfirmModal from "../../shared/components/saas/ExportConfirmModal";
@@ -51,6 +54,7 @@ import {
   typeNeedsSecondAccount,
   buildTransactionEntries,
   getTransactionDisplayAmount,
+  getTransactionAmountStyle,
   isCancelledTransaction,
 } from "../../shared/utils/transaction";
 import { getCategoryIconOption } from "../../shared/utils/categoryIcons";
@@ -65,6 +69,7 @@ export const Transaction = () => {
   const [limit] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<TransactionFilters>({});
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
   // ── Reference data
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -538,20 +543,10 @@ export const Transaction = () => {
       accessor: "entries",
       align: "right",
       render: (tx) => {
-        const { amount: amt, currency } = getTransactionDisplayAmount(tx);
-        const isIncome = tx.type === "INCOME";
-        const isExpense = tx.type === "EXPENSE";
+        const { formattedAmount, colorClass } = getTransactionAmountStyle(tx);
         return (
-          <span
-            className={`font-semibold tabular-nums text-sm ${isIncome
-                ? "text-emerald-700"
-                : isExpense
-                  ? "text-red-700"
-                  : "text-neutral-900"
-              }`}
-          >
-            {isExpense ? "−" : isIncome ? "+" : ""}
-            {formatCurrency(amt, currency)}
+          <span className={`font-semibold tabular-nums text-sm ${colorClass}`}>
+            {formattedAmount}
           </span>
         );
       },
@@ -754,12 +749,41 @@ export const Transaction = () => {
 
       {/* Transactions Table */}
       <div className="space-y-4">
-        <Table
-          columns={columns}
-          data={transactions}
-          isLoading={isLoading}
-          emptyMessage="No transactions found. Click 'Add Transaction' to record your first transaction."
-        />
+        {/* Desktop Table View (Hidden on mobile) */}
+        <div className="hidden md:block">
+          <Table
+            columns={columns}
+            data={transactions}
+            isLoading={isLoading}
+            emptyMessage="No transactions found. Click 'Add Transaction' to record your first transaction."
+          />
+        </div>
+
+        {/* Mobile Horizontal Cards View (Hidden on desktop) */}
+        <div className="md:hidden space-y-3">
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, idx) => (
+              <TransactionCardSkeleton key={`tx-skeleton-${idx}`} />
+            ))
+          ) : transactions.length === 0 ? (
+            <div className="rounded-2xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500 shadow-xs select-none">
+              No transactions found. Click &apos;Add Transaction&apos; to record your first transaction.
+            </div>
+          ) : (
+            transactions.map((tx) => (
+              <TransactionCard
+                key={tx.id}
+                transaction={tx}
+                isOpen={activeCardId === tx.id}
+                onToggle={() =>
+                  setActiveCardId((prev) => (prev === tx.id ? null : tx.id))
+                }
+                onCancel={setTxToCancel}
+                onDelete={setTxToDelete}
+              />
+            ))
+          )}
+        </div>
 
         {total > limit && (
           <Pagination
@@ -780,7 +804,7 @@ export const Transaction = () => {
         titleVariant="header"
         className="max-w-3xl w-full"
       >
-        <form noValidate onSubmit={handleSubmit} className="space-y-5 mt-1">
+        <form noValidate onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4 mt-1">
           {/* 1. Transaction Type selector (at the top, single line on desktop) */}
           <div>
             <FieldLabel
@@ -798,7 +822,7 @@ export const Transaction = () => {
                     key={t}
                     type="button"
                     onClick={() => handleTypeChange(t)}
-                    className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-medium transition-all cursor-pointer ${isActive
+                    className={`flex flex-col items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer ${isActive
                         ? `${meta.bg} ${meta.color} border-current ring-2 ring-offset-1 ring-current/30 shadow-xs font-semibold`
                         : "bg-white text-neutral-600 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
                       }`}
@@ -811,13 +835,8 @@ export const Transaction = () => {
             </div>
           </div>
 
-          {/* 2. Transaction Date & Account(s) */}
-          <div
-            className={`grid grid-cols-1 ${typeNeedsSecondAccount(txType)
-                ? "sm:grid-cols-3"
-                : "sm:grid-cols-2"
-              } gap-4`}
-          >
+          {/* 2. Transaction Date & Amount (Side by side on mobile & desktop) */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <CustomInput
               label="Transaction Date"
               type="date"
@@ -826,6 +845,34 @@ export const Transaction = () => {
               required
             />
 
+            <CustomInput
+              label={
+                txType === "EXPENSE"
+                  ? "Amount"
+                  : txType === "INCOME"
+                    ? "Amount"
+                    : txType === "ADJUSTMENT"
+                      ? "Amount (+/-)"
+                      : "Transfer Amount"
+              }
+              type="text"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={amount}
+              onChange={handleAmountChange}
+              error={amountError}
+              required
+            />
+          </div>
+
+          {/* 3. Account(s) & Category (Side by side on mobile & desktop) */}
+          <div
+            className={`grid ${
+              typeNeedsSecondAccount(txType) || typeNeedsCategory(txType)
+                ? "grid-cols-2"
+                : "grid-cols-1"
+            } gap-3 sm:gap-4`}
+          >
             <CustomSelect
               label={
                 typeNeedsSecondAccount(txType) ? "From Account" : "Account"
@@ -848,7 +895,7 @@ export const Transaction = () => {
               ))}
             </CustomSelect>
 
-            {typeNeedsSecondAccount(txType) && (
+            {typeNeedsSecondAccount(txType) ? (
               <CustomSelect
                 label="To Account"
                 value={toAccountId}
@@ -868,35 +915,7 @@ export const Transaction = () => {
                   </option>
                 ))}
               </CustomSelect>
-            )}
-          </div>
-
-          {/* 3. Amount & Category (if applicable) */}
-          <div
-            className={`grid grid-cols-1 ${
-              typeNeedsCategory(txType) ? "sm:grid-cols-2" : ""
-            } gap-4`}
-          >
-            <CustomInput
-              label={
-                txType === "EXPENSE"
-                  ? "Amount (will be deducted)"
-                  : txType === "INCOME"
-                    ? "Amount received"
-                    : txType === "ADJUSTMENT"
-                      ? "Amount (use − for decrease, + for increase)"
-                      : "Transfer Amount"
-              }
-              type="text"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={amount}
-              onChange={handleAmountChange}
-              error={amountError}
-              required
-            />
-
-            {typeNeedsCategory(txType) && (
+            ) : typeNeedsCategory(txType) ? (
               <CustomSelect
                 label="Category (optional)"
                 value={categoryId}
@@ -909,7 +928,7 @@ export const Transaction = () => {
                   </option>
                 ))}
               </CustomSelect>
-            )}
+            ) : null}
           </div>
 
           {/* 4. Description */}
@@ -927,7 +946,7 @@ export const Transaction = () => {
           />
 
           {/* 5. Reference + Notes */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <CustomInput
               label="Reference (optional)"
               placeholder="e.g. INV-2025-001"
