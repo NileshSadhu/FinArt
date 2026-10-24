@@ -17,6 +17,7 @@ export interface ModalProps {
   children?: ReactNode;
   className?: string;
   titleVariant?: 'default' | 'header';
+  bottomSheetOnMobile?: boolean;
 }
 
 const typeConfig: Record<
@@ -53,6 +54,7 @@ export const Modal: FC<ModalProps> = ({
   children,
   className = '',
   titleVariant = 'default',
+  bottomSheetOnMobile = true,
 }) => {
   useEffect(() => {
     if (!isOpen) return;
@@ -69,7 +71,7 @@ export const Modal: FC<ModalProps> = ({
   const Icon = config?.icon;
   const titleVariantClass =
     titleVariant === 'header'
-      ? '-mx-6 -mt-6 rounded-t-2xl bg-neutral-100 px-6 py-3'
+      ? `${bottomSheetOnMobile ? '-mx-5 -mt-5 rounded-t-[28px]' : '-mx-6 -mt-6 rounded-t-2xl'} sm:-mx-6 sm:-mt-6 sm:rounded-t-2xl bg-neutral-100 px-5 sm:px-6 py-3.5 border-b border-neutral-200/60`
       : '';
 
   const hasCustomMaxWidth = className && /\bmax-w-/.test(className);
@@ -77,18 +79,34 @@ export const Modal: FC<ModalProps> = ({
   return createPortal(
     <div
       onClick={(e) => e.target === e.currentTarget && onClose()}
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 bg-black/40 backdrop-blur-xs"
+      className={`fixed inset-0 z-50 flex overflow-y-auto bg-black/50 backdrop-blur-md transition-all duration-300 ${
+        bottomSheetOnMobile
+          ? 'items-end sm:items-center justify-center p-0 sm:p-4'
+          : 'items-center justify-center p-4'
+      }`}
     >
       <div
-        className={`relative w-full max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain ${hasCustomMaxWidth ? '' : 'max-w-sm'} rounded-2xl bg-white p-6 shadow-xl border border-neutral-100 ${className}`}
+        className={`relative w-full ${hasCustomMaxWidth ? '' : 'max-w-sm'} bg-white shadow-2xl border border-neutral-100/90 transition-all overscroll-contain ${
+          bottomSheetOnMobile
+            ? 'rounded-t-[28px] sm:rounded-2xl rounded-b-none sm:rounded-b-2xl p-5 sm:p-6 max-h-[88dvh] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto animate-bottom-sheet sm:animate-modal-pop pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6'
+            : 'rounded-2xl p-6 max-h-[calc(100dvh-2rem)] overflow-y-auto animate-modal-pop'
+        } ${className}`}
       >
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-1 text-neutral-400 hover:text-neutral-700 rounded-full transition-colors cursor-pointer"
+          className="absolute top-4 right-4 p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200/60 rounded-full transition-colors cursor-pointer z-20"
+          aria-label="Close modal"
         >
           <X className="w-5 h-5" />
         </button>
+
+        {/* Mobile Pull Handle Indicator for standard modals */}
+        {bottomSheetOnMobile && titleVariant !== 'header' && (
+          <div className="pt-0.5 pb-2.5 sm:hidden flex justify-center shrink-0">
+            <div className="w-10 h-1.5 rounded-full bg-neutral-300" />
+          </div>
+        )}
 
         {config && Icon && (
           <div
@@ -99,11 +117,18 @@ export const Modal: FC<ModalProps> = ({
         )}
 
         {title && (
-          <h3
-            className={`text-base font-semibold text-neutral-900 ${config ? 'text-center' : ''} ${titleVariantClass}`}
-          >
-            {title}
-          </h3>
+          <div className={titleVariantClass}>
+            {bottomSheetOnMobile && titleVariant === 'header' && (
+              <div className="pb-2 sm:hidden flex justify-center shrink-0">
+                <div className="w-10 h-1 rounded-full bg-neutral-300" />
+              </div>
+            )}
+            <h3
+              className={`text-base font-semibold text-neutral-900 ${config ? 'text-center' : ''}`}
+            >
+              {title}
+            </h3>
+          </div>
         )}
 
         {message && (

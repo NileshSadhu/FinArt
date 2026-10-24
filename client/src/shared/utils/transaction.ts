@@ -1,4 +1,4 @@
-﻿import {
+import {
   ArrowUpRight,
   ArrowDownLeft,
   ArrowLeftRight,
@@ -8,6 +8,7 @@
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Transaction, TransactionType, CreateTransactionPayload } from '../services/api/transactionService';
+import { formatCurrency } from './validation';
 
 // ── Type metadata ──────────────────────────────────────────────────────────────
 
@@ -124,5 +125,28 @@ export function getTransactionDisplayAmount(tx: Transaction): {
   return {
     amount: Math.abs(Number(entry.amount)),
     currency: entry.account?.currency ?? 'INR',
+  };
+}
+
+/**
+ * Returns the signed, formatted amount string and theme color for a transaction.
+ */
+export function getTransactionAmountStyle(tx: Transaction): {
+  formattedAmount: string;
+  colorClass: string;
+} {
+  const { amount, currency } = getTransactionDisplayAmount(tx);
+  const isIncome = tx.type === 'INCOME';
+  const isExpense = tx.type === 'EXPENSE';
+  const sign = isExpense ? '−' : isIncome ? '+' : '';
+  const colorClass = isIncome
+    ? 'text-emerald-700'
+    : isExpense
+    ? 'text-red-700'
+    : 'text-neutral-900';
+
+  return {
+    formattedAmount: `${sign}${formatCurrency(amount, currency)}`,
+    colorClass,
   };
 }
