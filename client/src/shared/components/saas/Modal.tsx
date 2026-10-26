@@ -18,6 +18,7 @@ export interface ModalProps {
   className?: string;
   titleVariant?: 'default' | 'header';
   bottomSheetOnMobile?: boolean;
+  zIndex?: string;
 }
 
 const typeConfig: Record<
@@ -55,6 +56,7 @@ export const Modal: FC<ModalProps> = ({
   className = '',
   titleVariant = 'default',
   bottomSheetOnMobile = true,
+  zIndex = 'z-50',
 }) => {
   useEffect(() => {
     if (!isOpen) return;
@@ -79,7 +81,7 @@ export const Modal: FC<ModalProps> = ({
   return createPortal(
     <div
       onClick={(e) => e.target === e.currentTarget && onClose()}
-      className={`fixed inset-0 z-50 flex overflow-y-auto bg-black/50 backdrop-blur-md transition-all duration-300 ${
+      className={`fixed inset-0 ${zIndex} flex overflow-y-auto bg-black/50 backdrop-blur-md transition-all duration-300 ${
         bottomSheetOnMobile
           ? 'items-end sm:items-center justify-center p-0 sm:p-4'
           : 'items-center justify-center p-4'

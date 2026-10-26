@@ -25,6 +25,7 @@ import {
   CATEGORY_ICON_OPTIONS,
   getCategoryIconOption,
 } from "../../shared/utils/categoryIcons";
+import IconPickerModal from "../../shared/components/saas/IconPickerModal";
 import { getApiErrorMessage } from "../../shared/utils/validation";
 
 const CATEGORY_TYPES: CategoryType[] = ["EXPENSE", "INCOME"];
@@ -53,6 +54,7 @@ export const Category = () => {
   const [nameError, setNameError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(
     null,
   );
@@ -96,6 +98,7 @@ export const Category = () => {
   // Cancel edit mode and reset form
   const handleCancelEdit = () => {
     setIsCategoryModalOpen(false);
+    setIsIconPickerOpen(false);
     setEditingCategory(null);
     setName("");
     setType("EXPENSE");
@@ -185,6 +188,11 @@ export const Category = () => {
   const expenseCount = categories.filter((c) => c.type === "EXPENSE").length;
   const incomeCount = categories.filter((c) => c.type === "INCOME").length;
   const customCount = categories.filter((c) => c.userId !== null).length;
+
+  const isCustomIconSelected =
+    icon !== null && !CATEGORY_ICON_PICKER_OPTIONS.some((opt) => opt.name === icon);
+  const customIconOption = isCustomIconSelected ? getCategoryIconOption(icon) : null;
+  const CustomSelectedIcon = customIconOption?.Icon;
 
   const columns: TableColumn<CategoryItem>[] = [
     {
@@ -415,10 +423,21 @@ export const Category = () => {
           </div>
 
           <div>
-            <FieldLabel label="Category Icon" className="mb-1.5 block" />
+            <div className="flex items-center justify-between mb-1.5">
+              <FieldLabel label="Category Icon" className="block" />
+              <button
+                type="button"
+                onClick={() => setIsIconPickerOpen(true)}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-neutral-600 hover:text-black transition-colors cursor-pointer group"
+              >
+                <Plus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                <span>Browse all icons</span>
+              </button>
+            </div>
+
             <div className="grid grid-cols-5 sm:grid-cols-6 gap-1.5">
               {CATEGORY_ICON_PICKER_OPTIONS.map(
-                ({ name: iconName, label, Icon, color, selectedColor }) => (
+                ({ name: iconName, label, Icon: OptionIcon, color, selectedColor }) => (
                   <button
                     key={iconName ?? "none"}
                     type="button"
@@ -432,11 +451,42 @@ export const Category = () => {
                         : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${color}`} />
+                    <OptionIcon className={`w-4 h-4 ${color}`} />
                     <span className="truncate max-w-full px-0.5">{label}</span>
                   </button>
                 ),
               )}
+
+              {/* Custom icon tile if user picked an icon from the library */}
+              {isCustomIconSelected && customIconOption && CustomSelectedIcon && (
+                <button
+                  type="button"
+                  onClick={() => setIsIconPickerOpen(true)}
+                  aria-label={customIconOption.label}
+                  title={`${customIconOption.label} (Custom icon - click to change)`}
+                  aria-pressed={true}
+                  className={`flex flex-col items-center justify-center gap-0.5 h-12 rounded-lg border text-[10px] transition-colors cursor-pointer ${customIconOption.selectedColor} ring-2`}
+                >
+                  <CustomSelectedIcon className={`w-4 h-4 ${customIconOption.color}`} />
+                  <span className="truncate max-w-full px-0.5 font-medium">{customIconOption.label}</span>
+                </button>
+              )}
+
+              {/* Plus icon option: Choose icon of user's choice */}
+              <button
+                type="button"
+                onClick={() => setIsIconPickerOpen(true)}
+                aria-label="Choose icon of your choice"
+                title="Browse & select icon of your choice"
+                className="flex flex-col items-center justify-center gap-0.5 h-12 rounded-lg border border-dashed border-neutral-300 bg-neutral-50/70 hover:bg-neutral-100 hover:border-neutral-900 text-neutral-700 transition-all cursor-pointer group"
+              >
+                <div className="w-5 h-5 rounded-full bg-white border border-neutral-300 flex items-center justify-center group-hover:border-black group-hover:bg-black group-hover:text-white transition-all shadow-2xs">
+                  <Plus className="w-3.5 h-3.5" />
+                </div>
+                <span className="truncate max-w-full px-0.5 font-medium text-[10px] text-neutral-700 group-hover:text-black">
+                  More...
+                </span>
+              </button>
             </div>
           </div>
 
@@ -462,6 +512,14 @@ export const Category = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Icon Picker Modal */}
+      <IconPickerModal
+        isOpen={isIconPickerOpen}
+        onClose={() => setIsIconPickerOpen(false)}
+        selectedIcon={icon}
+        onSelect={(selectedIconName) => setIcon(selectedIconName)}
+      />
 
       {/* Delete Confirmation Modal */}
       <Modal
