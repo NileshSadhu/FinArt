@@ -1,5 +1,5 @@
 import { useState, useMemo, type FC } from "react";
-import { Search, X, Check, Minus } from "lucide-react";
+import { Search, X, Check } from "lucide-react";
 import Modal from "./Modal";
 import {
   ICON_CATEGORIES,
@@ -53,43 +53,27 @@ export const IconPickerModal: FC<IconPickerModalProps> = ({
       className="max-w-2xl w-full"
     >
       <div className="space-y-4">
-        {/* Search bar & None button */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search icons (e.g. food, gym, coffee, uber, rent, tax, game)..."
-              className="w-full pl-9 pr-9 py-2 text-sm bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:bg-white transition-all placeholder:text-neutral-400"
-              autoFocus
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={handleClearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-neutral-400 hover:text-neutral-700 rounded-full hover:bg-neutral-200 transition-colors cursor-pointer"
-                aria-label="Clear search"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => handleSelect(null)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl border transition-colors cursor-pointer shrink-0 ${
-              selectedIcon === null
-                ? "border-black bg-neutral-900 text-white"
-                : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
-            }`}
-            title="Remove icon (use default)"
-          >
-            <Minus className="w-3.5 h-3.5" />
-            <span>No Icon</span>
-          </button>
+        {/* Search bar */}
+        <div className="relative">
+          <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search icons (e.g. food, gym, coffee, uber, rent, tax, game)..."
+            className="w-full pl-9 pr-9 py-2 text-sm bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:bg-white transition-all placeholder:text-neutral-400"
+            autoFocus
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-neutral-400 hover:text-neutral-700 rounded-full hover:bg-neutral-200 transition-colors cursor-pointer"
+              aria-label="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Category Pills */}
