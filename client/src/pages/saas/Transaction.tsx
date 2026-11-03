@@ -23,6 +23,7 @@ import TransactionCard, {
 } from "../../shared/components/saas/TransactionCard";
 import Pagination from "../../shared/components/saas/Pagination";
 import Modal from "../../shared/components/saas/Modal";
+import CurrencyLogo from "../../shared/components/saas/CurrencyLogo";
 import ExportConfirmModal from "../../shared/components/saas/ExportConfirmModal";
 import ImportModal from "../../shared/components/saas/ImportModal";
 import transactionService, {
@@ -39,7 +40,6 @@ import categoryService, {
   type Category,
 } from "../../shared/services/api/categoryService";
 import {
-  formatCurrency,
   formatNumberWithCommas,
   parseFormattedNumber,
   getApiErrorMessage,
@@ -53,7 +53,6 @@ import {
   typeNeedsCategory,
   typeNeedsSecondAccount,
   buildTransactionEntries,
-  getTransactionDisplayAmount,
   getTransactionAmountStyle,
   isCancelledTransaction,
 } from "../../shared/utils/transaction";
@@ -244,10 +243,7 @@ export const Transaction = () => {
     let hasError = false;
 
     const trimmedDesc = description.trim();
-    if (!trimmedDesc) {
-      setDescError("Description is required");
-      hasError = true;
-    } else if (trimmedDesc.length > MAX_TEXT_LENGTH) {
+    if (trimmedDesc.length > MAX_TEXT_LENGTH) {
       setDescError("Character limit reached");
       hasError = true;
     } else {
@@ -454,6 +450,7 @@ export const Transaction = () => {
         : false,
   );
   const toAccountOptions = accounts.filter((a) => a.id !== accountId);
+  const selectedAccount = accounts.find((account) => account.id === accountId);
 
   // ── Table Columns
   const columns: TableColumn<TxItem>[] = [
@@ -847,13 +844,19 @@ export const Transaction = () => {
 
             <CustomInput
               label={
-                txType === "EXPENSE"
-                  ? "Amount"
-                  : txType === "INCOME"
-                    ? "Amount"
-                    : txType === "ADJUSTMENT"
-                      ? "Amount (+/-)"
-                      : "Transfer Amount"
+                <span className="inline-flex items-center gap-1.5">
+                  {selectedAccount && (
+                    <CurrencyLogo
+                      currency={selectedAccount.currency}
+                      className="h-3.5 w-3.5"
+                    />
+                  )}
+                  {txType === "ADJUSTMENT"
+                    ? "Amount (+/-)"
+                    : typeNeedsSecondAccount(txType)
+                      ? "Transfer Amount"
+                      : "Amount"}
+                </span>
               }
               type="text"
               inputMode="decimal"
@@ -931,9 +934,9 @@ export const Transaction = () => {
             ) : null}
           </div>
 
-          {/* 4. Description */}
+          {/* 4. Optional description */}
           <CustomInput
-            label="Description"
+            label="Description (optional)"
             placeholder="e.g. Grocery shopping"
             maxLength={MAX_TEXT_LENGTH}
             value={description}
@@ -942,7 +945,6 @@ export const Transaction = () => {
               if (descError) setDescError("");
             }}
             error={descError}
-            required
           />
 
           {/* 5. Reference + Notes */}

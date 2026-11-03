@@ -206,7 +206,7 @@ export const DashboardPage = () => {
       string,
       { id: string; name: string; icon: string | null; amount: number }
     >();
-    let currency = "INR";
+    let currency = user?.defaultCurrency ?? "USD";
 
     for (const tx of currentMonthTx) {
       const { amount, currency: txCurrency } =
@@ -249,7 +249,7 @@ export const DashboardPage = () => {
       categoryExpenses: sortedCategories,
       primaryCurrency: currency,
     };
-  }, [currentMonthTx]);
+  }, [currentMonthTx, user?.defaultCurrency]);
 
   const maxExpense = categoryExpenses[0]?.amount || 1;
 

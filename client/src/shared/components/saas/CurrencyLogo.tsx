@@ -14,12 +14,28 @@ export interface CurrencyLogoProps {
   showCodeTooltip?: boolean;
 }
 
+const getCurrencySymbol = (currency: string): string | null => {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      currencyDisplay: "narrowSymbol",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    })
+      .formatToParts(0)
+      .find((part) => part.type === "currency")?.value ?? null;
+  } catch {
+    return null;
+  }
+};
+
 export const CurrencyLogo: React.FC<CurrencyLogoProps> = ({
-  currency = "INR",
+  currency = "USD",
   className = "w-4 h-4",
   showCodeTooltip = true,
 }) => {
-  const normalized = (currency || "INR").toUpperCase().trim();
+  const normalized = (currency || "USD").toUpperCase().trim();
 
   const renderIcon = () => {
     switch (normalized) {
@@ -49,8 +65,16 @@ export const CurrencyLogo: React.FC<CurrencyLogoProps> = ({
             د.إ
           </span>
         );
-      default:
-        return <Coins className={className} />;
+      default: {
+        const symbol = getCurrencySymbol(normalized);
+        return symbol ? (
+          <span className="font-bold text-[11px] leading-none select-none">
+            {symbol}
+          </span>
+        ) : (
+          <Coins className={className} />
+        );
+      }
     }
   };
 

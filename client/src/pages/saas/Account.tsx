@@ -11,6 +11,7 @@ import AccountCard, {
 } from "../../shared/components/saas/AccountCard";
 import Pagination from "../../shared/components/saas/Pagination";
 import Modal from "../../shared/components/saas/Modal";
+import { useAuth } from "../../shared/services/auth/useAuth";
 import accountService, {
   ACCOUNT_TYPES,
   SUPPORTED_CURRENCIES,
@@ -31,10 +32,16 @@ import {
 } from "../../shared/utils/validation";
 
 export const Account = () => {
+  const { user } = useAuth();
+  const defaultCurrency = user?.defaultCurrency ?? "USD";
+  const currencyOptions = Array.from(
+    new Set([...SUPPORTED_CURRENCIES, defaultCurrency]),
+  );
+
   // Form State
   const [name, setName] = useState("");
   const [type, setType] = useState<AccountType>(ACCOUNT_TYPES[0]);
-  const [currency, setCurrency] = useState<SupportedCurrency>("INR");
+  const [currency, setCurrency] = useState<SupportedCurrency>(defaultCurrency);
   const [openingBalance, setOpeningBalance] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [nameError, setNameError] = useState("");
@@ -101,7 +108,7 @@ export const Account = () => {
     setName("");
     setOpeningBalance("");
     setType(ACCOUNT_TYPES[0]);
-    setCurrency("INR");
+    setCurrency(defaultCurrency);
     setNameError("");
     setBalanceError("");
   };
@@ -396,10 +403,15 @@ export const Account = () => {
             />
 
             <CustomSelect
-              label="Currency"
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  <CurrencyLogo currency={currency} className="h-3.5 w-3.5" />
+                  Currency
+                </span>
+              }
               value={currency}
               onChange={(e) => setCurrency(e.target.value as SupportedCurrency)}
-              options={SUPPORTED_CURRENCIES}
+              options={currencyOptions}
             />
 
             {/* Opening Balance */}
