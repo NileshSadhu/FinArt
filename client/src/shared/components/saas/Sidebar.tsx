@@ -4,8 +4,7 @@ import {
   LayoutDashboard,
   CreditCard,
   ArrowLeftRight,
-  TrendingUp,
-  Settings,
+  CalendarDays,
   LogOut,
   X,
   Tag,
@@ -25,8 +24,8 @@ const navItems: NavItem[] = [
   { name: 'Transactions', path: '/transactions', icon: ArrowLeftRight },
   { name: 'Accounts', path: '/accounts', icon: CreditCard },
   { name: 'Categories', path: '/categories', icon: Tag },
-  { name: 'Analytics', path: '/analytics', icon: TrendingUp },
-  { name: 'Settings', path: '/settings', icon: Settings },
+  { name: 'Calendar', path: '/calendar', icon: CalendarDays },
+  // { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
 export interface SidebarProps {

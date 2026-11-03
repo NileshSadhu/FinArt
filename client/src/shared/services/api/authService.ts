@@ -6,6 +6,8 @@ export interface User {
   email: string;
   name: string | null;
   avatarUrl: string | null;
+  countryCode: string | null;
+  defaultCurrency: string | null;
   createdAt: string;
 }
 
@@ -22,6 +24,15 @@ export const authService = {
    */
   getMe: async (): Promise<User> => {
     const res = await apiConfig.get<{ data: User }>(ApiPath.auth.me);
+    return res.data.data;
+  },
+
+  updateCountry: async (
+    countryCode: string,
+  ): Promise<{ countryCode: string; defaultCurrency: string }> => {
+    const res = await apiConfig.patch<{
+      data: { countryCode: string; defaultCurrency: string };
+    }>(ApiPath.auth.country, { countryCode });
     return res.data.data;
   },
 

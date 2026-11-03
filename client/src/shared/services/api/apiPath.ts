@@ -7,6 +7,7 @@ export const ApiPath = {
         googleInit: '/auth/google',
         me: '/auth/me',
         signOut: '/auth/signout',
+        country: '/auth/country',
     },
     accounts: {
         base: '/accounts',
@@ -22,5 +23,9 @@ export const ApiPath = {
     categories: {
         base: '/categories',
         byId: (id: string) => `/categories/${id}`,
+    },
+    holidays: {
+        base: '/holidays',
+        countries: '/holidays/countries',
     },
 } as const;
