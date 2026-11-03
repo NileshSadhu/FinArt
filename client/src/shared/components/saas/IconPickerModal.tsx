@@ -30,9 +30,15 @@ export const IconPickerModal: FC<IconPickerModalProps> = ({
     return searchCategoryIcons(searchQuery, activeCategory);
   }, [searchQuery, activeCategory]);
 
+  const handleClose = () => {
+    setSearchQuery("");
+    setActiveCategory("all");
+    onClose();
+  };
+
   const handleSelect = (name: string | null) => {
     onSelect(name);
-    onClose();
+    handleClose();
   };
 
   const handleClearSearch = () => {
@@ -46,7 +52,7 @@ export const IconPickerModal: FC<IconPickerModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Choose Category Icon"
       titleVariant="header"
       zIndex="z-60"
@@ -173,7 +179,7 @@ export const IconPickerModal: FC<IconPickerModalProps> = ({
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="py-1.5 px-4 rounded-lg font-medium border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
             >
               Close

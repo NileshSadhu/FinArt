@@ -425,14 +425,6 @@ export const Category = () => {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <FieldLabel label="Category Icon" className="block" />
-              <button
-                type="button"
-                onClick={() => setIsIconPickerOpen(true)}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-neutral-600 hover:text-black transition-colors cursor-pointer group"
-              >
-                <Plus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-                <span>Browse all icons</span>
-              </button>
             </div>
 
             <div className="grid grid-cols-5 sm:grid-cols-6 gap-1.5">
