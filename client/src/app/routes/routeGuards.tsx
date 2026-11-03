@@ -1,5 +1,5 @@
 import type { FC, ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../shared/services/auth/useAuth';
 import Skeleton from '../../shared/components/saas/Skeleton';
 
@@ -42,14 +42,14 @@ const RouteLoadingSkeleton = () => (
  * PublicOnlyRoute: If user is already authenticated, redirects them away from public pages (like / or /signin) to /dashboard
  */
 export const PublicOnlyRoute: FC<RouteGuardProps> = ({ children }) => {
-  const { isLoggedIn, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return <RouteLoadingSkeleton />;
   }
 
-  if (isLoggedIn) {
-    return <Navigate to="/dashboard" replace />;
+  if (user) {
+    return <Navigate to={user.countryCode ? "/dashboard" : "/country-setup"} replace />;
   }
 
   return <>{children}</>;
@@ -59,14 +59,23 @@ export const PublicOnlyRoute: FC<RouteGuardProps> = ({ children }) => {
  * ProtectedRoute: Requires user to be authenticated, otherwise redirects to /signin
  */
 export const ProtectedRoute: FC<RouteGuardProps> = ({ children }) => {
-  const { isLoggedIn, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return <RouteLoadingSkeleton />;
   }
 
-  if (!isLoggedIn) {
+  if (!user) {
     return <Navigate to="/signin" replace />;
+  }
+
+  if (!user.countryCode && location.pathname !== "/country-setup") {
+    return <Navigate to="/country-setup" replace />;
+  }
+
+  if (user.countryCode && location.pathname === "/country-setup") {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
