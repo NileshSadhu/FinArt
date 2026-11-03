@@ -119,12 +119,12 @@ export function getTransactionDisplayAmount(tx: Transaction): {
   amount: number;
   currency: string;
 } {
-  if (!tx.entries.length) return { amount: 0, currency: 'INR' };
+  if (!tx.entries.length) return { amount: 0, currency: 'USD' };
   const positiveEntry = tx.entries.find((e) => Number(e.amount) > 0);
   const entry = positiveEntry ?? tx.entries[0];
   return {
     amount: Math.abs(Number(entry.amount)),
-    currency: entry.account?.currency ?? 'INR',
+    currency: entry.account?.currency ?? 'USD',
   };
 }
 

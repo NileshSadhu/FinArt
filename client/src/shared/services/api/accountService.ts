@@ -36,7 +36,7 @@ export const SUPPORTED_CURRENCIES = [
   'AED',
   'CHF',
 ] as const;
-export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
+export type SupportedCurrency = string;
 
 export interface CreateAccountPayload {
   name: string;
@@ -69,4 +69,3 @@ export const accountService = {
 };
 
 export default accountService;
-

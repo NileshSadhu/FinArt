@@ -74,12 +74,12 @@ export const parseFormattedNumber = (value: string | number): number => {
 
 export const formatCurrency = (
   amount: number,
-  currency: string = "INR",
+  currency: string = "USD",
 ): string => {
   try {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: currency || "INR",
+      currency: currency || "USD",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);

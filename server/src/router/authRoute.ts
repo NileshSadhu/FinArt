@@ -4,6 +4,7 @@ import {
   googleCallback,
   signOut,
   getMe,
+  updateCountry,
 } from "../controllers/auth.controller.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
 import {
@@ -33,5 +34,6 @@ authRoute.get(
 
 authRoute.post("/signout", authApiLimiter, requireAuth, signOut);
 authRoute.get("/me", authApiLimiter, requireAuth, getMe);
+authRoute.patch("/country", authApiLimiter, requireAuth, updateCountry);
 
 export default authRoute;

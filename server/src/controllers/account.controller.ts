@@ -11,6 +11,8 @@ import {
   createAccountSchema,
   updateAccountSchema,
 } from "../validators/account.validator.js";
+import { prisma } from "../db/client.js";
+import { getCountryCurrency } from "../utils/countryCurrency.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -59,7 +61,18 @@ export const createAccount = asyncHandler(
       );
     }
 
-    const account = await accountRepository.create({ userId, ...parsed.data });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { countryCode: true },
+    });
+    const currency =
+      parsed.data.currency ??
+      (user?.countryCode ? getCountryCurrency(user.countryCode) : "USD");
+    const account = await accountRepository.create({
+      userId,
+      ...parsed.data,
+      currency,
+    });
 
     return res
       .status(201)

@@ -63,6 +63,16 @@ describe("Transaction Validator Tests", () => {
       assert.equal(result.success, true);
     });
 
+    it("accepts an expense without a description", () => {
+      const result = transactionSchema.safeParse({
+        transactionDate: "2026-10-17",
+        type: "EXPENSE",
+        entries: [{ accountId: VALID_ACCOUNT_1, amount: -1500 }],
+      });
+      assert.equal(result.success, true);
+      if (result.success) assert.equal(result.data.description, "");
+    });
+
     it("rejects expense with a positive or zero entry", () => {
       const result = transactionSchema.safeParse({
         transactionDate: "2026-10-17",
@@ -148,6 +158,11 @@ describe("Transaction Validator Tests", () => {
       const result = updateTransactionSchema.safeParse({
         description: "Updated description",
       });
+      assert.equal(result.success, true);
+    });
+
+    it("accepts clearing the description", () => {
+      const result = updateTransactionSchema.safeParse({ description: "" });
       assert.equal(result.success, true);
     });
 

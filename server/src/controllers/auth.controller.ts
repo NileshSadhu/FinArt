@@ -4,16 +4,11 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { getUserId } from "../utils/params.js";
+import { getAvailableHolidayCountries } from "../utils/holidayProvider.js";
+import { getCountryCurrency } from "../utils/countryCurrency.js";
 
 export const googleCallback = asyncHandler(
-  async (req: Request, res: Response) => {
-    const user = req.user as {
-      id: string;
-      email: string;
-      name: string | null;
-      avatarUrl: string | null;
-    };
-
+  async (_req: Request, res: Response) => {
     const clientOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
     return res.redirect(`${clientOrigin}/auth/callback?status=success`);
   },
@@ -48,9 +43,44 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
         email: user.email,
         name: user.name,
         avatarUrl: user.avatarUrl,
+        countryCode: user.countryCode,
+        defaultCurrency: user.countryCode
+          ? getCountryCurrency(user.countryCode)
+          : null,
         createdAt: user.createdAt,
       },
       "User fetched",
     ),
   );
 });
+
+export const updateCountry = asyncHandler(
+  async (req: Request, res: Response) => {
+    const countryCode =
+      typeof req.body?.countryCode === "string"
+        ? req.body.countryCode.trim().toUpperCase()
+        : "";
+    if (!/^[A-Z]{2}$/.test(countryCode)) {
+      throw new ApiError(400, "A valid country code is required");
+    }
+
+    const countries = await getAvailableHolidayCountries();
+    if (!countries.some((country) => country.countryCode === countryCode)) {
+      throw new ApiError(400, "The selected country is not supported");
+    }
+
+    const user = await userRepository.update(getUserId(res), { countryCode });
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          {
+            countryCode: user.countryCode,
+            defaultCurrency: getCountryCurrency(countryCode),
+          },
+          "Country updated",
+        ),
+      );
+  },
+);

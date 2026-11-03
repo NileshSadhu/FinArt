@@ -13,7 +13,7 @@ export const transactionSchema = z
   .object({
     categoryId: z.string().uuid().nullable().optional(),
     transactionDate: z.coerce.date(),
-    description: z.string().trim().min(1, "Description is required").max(225),
+    description: z.string().trim().max(225).optional().default(""),
     type: z.enum(TRANSACTION_TYPES),
     reference: z.string().max(225).nullable().optional(),
     notes: z.string().max(225).nullable().optional(),
@@ -118,7 +118,7 @@ export const updateTransactionSchema = z
   .object({
     categoryId: z.string().uuid().nullable().optional(),
     transactionDate: z.coerce.date().optional(),
-    description: z.string().trim().min(1).max(225).optional(),
+    description: z.string().trim().max(225).optional(),
     type: z.enum(TRANSACTION_TYPES).optional(),
     reference: z.string().max(225).nullable().optional(),
     notes: z.string().max(225).nullable().optional(),

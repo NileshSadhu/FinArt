@@ -40,6 +40,7 @@ model User {
   email          String   @unique
   name           String?
   avatarUrl      String?
+  countryCode    String?  @db.VarChar(2)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -110,6 +111,28 @@ model Transaction {
   @@index([userId, type])
   @@index([userId, categoryId])
   @@map("transactions")
+}
+
+model Holiday {
+  id          String   @id @default(uuid()) @db.Uuid
+  holidayDate DateTime @db.Date
+  name        String
+  countryCode String   @db.VarChar(2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([countryCode, holidayDate, name])
+  @@index([countryCode, holidayDate])
+  @@map("holidays")
+}
+
+model HolidayYearSync {
+  countryCode String   @db.VarChar(2)
+  year        Int
+  syncedAt    DateTime @default(now())
+
+  @@id([countryCode, year])
+  @@map("holiday_year_syncs")
 }
 
 model TransactionEntry {

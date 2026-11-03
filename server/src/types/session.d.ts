@@ -14,6 +14,7 @@ declare global {
       email: string;
       name: string | null;
       avatarUrl: string | null;
+      countryCode: string | null;
       createdAt: Date;
       updatedAt: Date;
     }
