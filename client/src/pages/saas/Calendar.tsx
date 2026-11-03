@@ -403,7 +403,7 @@ const Calendar = () => {
               ))}
               <span className="inline-flex items-center gap-2 text-xs text-neutral-600">
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                Holiday
+                Festival or National Holiday
               </span>
               {legendTypes.length === 0 && holidays.length === 0 && !isLoading && !areHolidaysLoading && (
                 <span className="text-xs text-neutral-500">
